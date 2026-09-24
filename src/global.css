@@ -1,0 +1,231 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Color tokens — light theme
+     Usage: bg-*, text-*, border-* (e.g. bg-primary text-primary-foreground)
+     Each token has a -foreground pair for text on that surface. */
+  /* Fuel Mood map tokens (read at runtime by MapLibre paint expressions) */
+  --color-map-sea: #dfe7ee;
+  --color-map-land: #b9c2cc;                                         /* countries without Bulletin data */
+  --color-map-border: #ffffff;
+  --color-heat-cold: #4f8fd6;                                     /* Heat 0% */
+  --color-heat-warm: #f5d547;                                     /* Heat +25% */
+  --color-heat-hot: #d7301f;                                      /* Heat +50% and above */
+  --color-selected: #111827;
+  --color-glass: rgba(255, 255, 255, 0.82);                          /* floating panels over the map */
+  /* Mood faces (Fluent Emoji High Contrast used as a mask), green -> red */
+  --color-mood-falling: #15803d; --color-mood-sun: #4d8f1f; --color-mood-sunny-spells: #8a8a12;
+  --color-mood-cloudy: #c26a06;  --color-mood-rain: #e0520c; --color-mood-storm: #d11f1f;
+  /* Weather band marker surfaces (bg) and their text/arrow colour (fg) */
+  --color-band-falling: #d9f2e4;      --color-band-falling-fg: var(--color-mood-falling);
+  --color-band-sun: #fff3c4;          --color-band-sun-fg: var(--color-mood-sun);
+  --color-band-sunny-spells: #fde9c8; --color-band-sunny-spells-fg: var(--color-mood-sunny-spells);
+  --color-band-cloudy: #e6e8ec;       --color-band-cloudy-fg: var(--color-mood-cloudy);
+  --color-band-rain: #fbd9c4;         --color-band-rain-fg: var(--color-mood-rain);
+  --color-band-storm: #f6c9d0;        --color-band-storm-fg: var(--color-mood-storm);
+
+  --color-background: #ffffff;                                       /* page background */
+  --color-foreground: #242424;                                       /* default text */
+
+  --color-card: #ffffff;                                             /* card surfaces */
+  --color-card-foreground: #242424;
+
+  --color-popover: #ffffff;                                          /* popover/dropdown surfaces */
+  --color-popover-foreground: #242424;
+
+  --color-primary: #0f6cbd;                                          /* primary actions & buttons */
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #fafafa;                                        /* secondary actions */
+  --color-secondary-foreground: #242424;
+
+  --color-muted: #f0f0f0;                                            /* subtle backgrounds */
+  --color-muted-foreground: #616161;                                 /* subdued text */
+
+  --color-accent: #f5f5f5;                                           /* accent highlights */
+  --color-accent-foreground: #242424;
+
+  --color-destructive: #b10e1c;                                      /* errors & destructive actions */
+  --color-destructive-foreground: #ffffff;
+
+  --color-success: #0e700e;                                          /* success surfaces */
+  --color-success-foreground: #ffffff;
+
+  --color-border: #e0e0e0;                                           /* default border */
+  --color-input: #e0e0e0;                                            /* input field borders */
+  --color-ring: #0f6cbd;                                             /* focus rings */
+
+  /* Elevation shadows — Fluent UI v9 ramp, keyed by resting elevation in px.
+     Usage: shadow-* (e.g. shadow-8, shadow-64) */
+  --shadow-2:  0 0 2px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.14);
+  --shadow-4:  0 0 2px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.14);
+  --shadow-8:  0 0 2px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.14);
+  --shadow-16: 0 0 2px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.14);
+  --shadow-28: 0 0 8px rgba(0, 0, 0, 0.12), 0 14px 28px rgba(0, 0, 0, 0.14);
+  --shadow-64: 0 0 8px rgba(0, 0, 0, 0.12), 0 32px 64px rgba(0, 0, 0, 0.14);
+
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
+  --radius-4xl: 24px;
+  --radius-5xl: 32px;
+  --radius-6xl: 40px;
+  --radius-full: 9999px;
+  --radius: 6px;
+
+  /* Spacing — 4px grid; use only these tokens, no interpolation. *-nudge = base − 2px.
+     Usage: p-*, m-*, gap-* (e.g. p-400 gap-300) */
+  --spacing-none: 0;
+  --spacing-100-nudge: 2px;
+  --spacing-100: 4px;
+  --spacing-200-nudge: 6px;
+  --spacing-200: 8px;
+  --spacing-300-nudge: 10px;
+  --spacing-300: 12px;
+  --spacing-400: 16px;
+  --spacing-500: 20px;
+  --spacing-600: 24px;
+  --spacing-700: 28px;
+  --spacing-800: 32px;
+
+  /* Font Sizes — 100-based scale 
+     Usage: text-* (e.g. text-300, text-hero-900) */
+  --text-100: 10px;
+  --text-200: 12px;
+  --text-300: 14px;
+  --text-400: 16px;
+  --text-500: 20px;
+  --text-600: 24px;
+  --text-hero-700: 28px;
+  --text-hero-800: 32px;
+  --text-hero-900: 40px;
+  --text-hero-1000: 68px;
+
+  /* Line Heights — paired with font sizes
+     Usage: leading-* (e.g. leading-300) */
+  --leading-100: 14px;
+  --leading-200: 16px;
+  --leading-300: 20px;
+  --leading-400: 22px;
+  --leading-500: 28px;
+  --leading-600: 32px;
+  --leading-hero-700: 36px;
+  --leading-hero-800: 40px;
+  --leading-hero-900: 52px;
+  --leading-hero-1000: 92px;
+
+  /* Font Weights
+     Usage: font-* (e.g. font-semibold) */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Font Families
+     Usage: font-* (e.g. font-heading, font-base) */
+  --font-heading: Bahnschrift, 'Segoe UI', 'Segoe UI Web (West European)',       /* headings, titles, display text */
+    -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+  --font-base: 'Segoe UI', 'Segoe UI Web (West European)',          /* body text, labels, UI controls */
+    -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', sans-serif;
+  --font-monospace: Consolas, 'Courier New', Courier, monospace;     /* code, pre-formatted text */
+  --font-numeric: Bahnschrift, 'Segoe UI',                          /* KPI values, numeric displays */
+    'Segoe UI Web (West European)', -apple-system, BlinkMacSystemFont, Roboto,
+    'Helvetica Neue', sans-serif;
+
+  /* Icon Sizes — 100-based scale
+     Usage: icon-size-* custom utility (e.g. icon-size-200) */
+  --icon-size-100: 12px;
+  --icon-size-200: 16px;
+  --icon-size-300: 20px;
+  --icon-size-400: 24px;
+  --icon-size-500: 28px;
+  --icon-size-600: 32px;
+  --icon-size-700: 48px;
+}
+
+@utility icon-size-* {
+  width: --value(--icon-size-*);
+  height: --value(--icon-size-*);
+}
+
+@layer base {
+  .dark {
+    /* Color tokens — dark theme */
+    --color-map-sea: #071a2c;
+    --color-map-land: #2b3746;
+    --color-map-border: #071a2c;
+    --color-heat-cold: #3f7fc9;
+    --color-heat-warm: #e8c53a;
+    --color-heat-hot: #d7301f;
+    --color-selected: #ffffff;
+    --color-glass: rgba(10, 22, 36, 0.78);
+    --color-mood-falling: #4ade80; --color-mood-sun: #a3e635; --color-mood-sunny-spells: #facc15;
+    --color-mood-cloudy: #fbbf24;  --color-mood-rain: #fb923c; --color-mood-storm: #f87171;
+    --color-band-falling: #12402b;      --color-band-falling-fg: var(--color-mood-falling);
+    --color-band-sun: #4a3d0c;          --color-band-sun-fg: var(--color-mood-sun);
+    --color-band-sunny-spells: #4a300c; --color-band-sunny-spells-fg: var(--color-mood-sunny-spells);
+    --color-band-cloudy: #333a45;       --color-band-cloudy-fg: var(--color-mood-cloudy);
+    --color-band-rain: #4d2410;         --color-band-rain-fg: var(--color-mood-rain);
+    --color-band-storm: #52131f;        --color-band-storm-fg: var(--color-mood-storm);
+
+    --color-background: #292929;
+    --color-foreground: #ffffff;
+
+    --color-card: #292929;
+    --color-card-foreground: #ffffff;
+
+    --color-popover: #292929;
+    --color-popover-foreground: #ffffff;
+
+    --color-primary: #115ea3;
+    --color-primary-foreground: #ffffff;
+
+    --color-secondary: #1f1f1f;
+    --color-secondary-foreground: #ffffff;
+
+    --color-muted: #141414;
+    --color-muted-foreground: #adadad;
+
+    --color-accent: #3d3d3d;
+    --color-accent-foreground: #ffffff;
+
+    --color-destructive: #dc626d;
+    --color-destructive-foreground: #ffffff;
+
+    --color-success: #54b054;
+    --color-success-foreground: #ffffff;
+
+    --color-border: #525252;
+    --color-input: #525252;
+    --color-ring: #479ef5;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Native form controls don't inherit the page font by default */
+button, input, select, textarea {
+  font-family: inherit;
+}

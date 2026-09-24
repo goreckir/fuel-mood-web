@@ -1,0 +1,26 @@
+Fuel Mood — third-party data, assets and code
+
+DATA
+----
+Fuel prices: European Commission, Weekly Oil Bulletin, "Price developments 2005 onwards".
+  © European Union, 2005–2026. Licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+  Source: https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en
+  Changes: public/weather.json holds prices converted to €/L plus week-over-week change (Weather),
+  change since the Baseline price (Heat) and Weather bands, computed by Fuel Mood (scripts/refresh-data.mjs).
+
+Country borders: Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+  Natural Earth 1:50m Admin 0 Countries, public domain; clipped and simplified in public/europe.geojson.
+
+ASSETS
+------
+Mood faces (public/mood/*.svg): Fluent Emoji, © Microsoft Corporation, MIT License (see public/mood/LICENSE).
+
+CODE
+----
+src/lib/utils.ts, src/hooks/use-theme.ts and the design tokens in src/global.css come from the
+Microsoft Fabric Apps starter template, © Microsoft Corporation, MIT License.
+
+Runtime libraries (licences ship with each package under node_modules):
+  MapLibre GL JS (BSD-3-Clause), react-map-gl (MIT), React (MIT), Tailwind CSS (MIT),
+  lucide-react (ISC), clsx (MIT), tailwind-merge (MIT).
+Build-time only: exceljs (MIT), Vite (MIT), TypeScript (Apache-2.0).

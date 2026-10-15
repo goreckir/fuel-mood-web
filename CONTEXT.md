@@ -78,6 +78,26 @@ _Avoid_: weather strip, sparkline, forecast bar, history
 The chart of one Country's Heat curve for this year with the previous year's curve overlaid, each year against its own February baseline and aligned week by week.
 _Avoid_: weather strip trend, PY trend, sparkline
 
+**Price level**:
+The value of the selected Price component in €/L for one Country, Fuel and the Selected week: "how much", as opposed to the changes Weather and Heat ("by how much").
+_Avoid_: price ranking, cheapness, level change
+
+**EU average**:
+The European Commission's own weighted EU-27 average from the Bulletin, used as the reference for Price levels; its Taxes are EU average Pump price minus EU average Net price. Not computed by Fuel Mood.
+_Avoid_: mean, euro-area average, EU price
+
+**Gap to EU average**:
+How far a Country's Price level is from the EU average in the same Selected week, in percent (negative = cheaper than the EU average); shown as the Country's colour on the Country comparison map. It compares Countries, never weeks.
+_Avoid_: deviation, spread, premium, Heat
+
+**Rank**:
+A Country's position 1–27 by Price level of the selected Price component in the Selected week (1 = lowest). Changes of Rank are not shown.
+_Avoid_: place, position change, ranking
+
+**Country comparison**:
+The page that sets Countries side by side by Price level, with the EU average as the reference. It answers "where in the EU is fuel cheapest or dearest, is that because of Taxes, and how does my Country compare with the EU average?". It shares Fuel, Price component, Selected week and the selected Country with the map page. Cross-country comparisons carry the Bulletin's caveat of limited validity.
+_Avoid_: ranking (that is the panel tab sorted by Weather), league table
+
 **Price breakdown**:
 For one Country, Fuel and the Selected week: the Pump price split into Net price and Taxes in €/L (with the tax share), plus the change since the Baseline price split the same way (Δ Pump price = Δ Net price + Δ Taxes, in €/L). Shown whatever the Price component.
 _Avoid_: tax split, price decomposition, waterfall

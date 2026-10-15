@@ -7,7 +7,10 @@ import { Info, Moon, Sun } from "lucide-react";
 import { useThemeContext } from "@/hooks/theme.context";
 import { cn } from "@/lib/utils";
 import { CountryPanel } from "./weather/CountryPanel";
-import { FUELS, formatWeek, usePersistentState, useWeatherData, type FuelCode, type MarkerStyle, type MarkerValue } from "./weather/data";
+import {
+    FUELS, PRICE_COMPONENTS, componentPySeries, componentSeries, formatWeek, usePersistentState, useWeatherData,
+    type FuelCode, type MarkerStyle, type MarkerValue, type PriceComponent,
+} from "./weather/data";
 import { InfoPage } from "./weather/InfoPage";
 import { HoverTip } from "./weather/Tooltip";
 import { Legend } from "./weather/Legend";
@@ -19,6 +22,9 @@ function App() {
     const { geo, weather, error } = useWeatherData();
 
     const [fuel, setFuel] = usePersistentState<FuelCode>("fw.fuel", "e95");
+    const [storedComponent, setComponent] = usePersistentState<PriceComponent>("fw.priceComponent", "pump");
+    const priceComponent = PRICE_COMPONENTS.find((c) => c.code === storedComponent) ?? PRICE_COMPONENTS[0];
+    const component = priceComponent.code;
     const [country, setCountry] = usePersistentState<string>("fw.country", "PL");
     const [markerStyle, setMarkerStyle] = usePersistentState<MarkerStyle>("fw.markers", "mood");
     const [markerValue, setMarkerValue] = usePersistentState<MarkerValue>("fw.markerValue", "week");
@@ -28,8 +34,10 @@ function App() {
     const [heatRange, setHeatRange] = useState<[number, number]>();
     const page = useHashPage();
 
-    const series = weather?.fuels[fuel];
-    const weeks = useMemo(() => (series ? Object.keys(series).sort() : []), [series]);
+    // Bulletin weeks come from the Pump price; every Price component has the same weeks.
+    const pumpSeries = weather?.fuels[fuel];
+    const series = weather ? componentSeries(weather, component, fuel) : undefined;
+    const weeks = useMemo(() => (pumpSeries ? Object.keys(pumpSeries).sort() : []), [pumpSeries]);
     const index = weekIndex ?? weeks.length - 1;
     const week = weeks[index];
 
@@ -41,7 +49,7 @@ function App() {
 
     const names = useMemo(() => Object.fromEntries((geo?.features ?? []).map((f) => [f.properties.code, f.properties.name])), [geo]);
     const fuelLabel = FUELS.find((f) => f.code === fuel)!.label;
-    const baselineWeek = series && week ? Object.values(series[week])[0]?.baselineWeek : undefined;
+    const baselineWeek = series && week ? Object.values(series[week] ?? {})[0]?.baselineWeek : undefined;
 
     if (page === "info" && weather) {
         return <InfoPage bands={weather.bands} onBack={() => { window.location.hash = ""; }} />;
@@ -52,7 +60,9 @@ function App() {
             {geo && series && week && (
                 <WeatherMap
                     geo={geo}
-                    cells={series[week]}
+                    cells={series[week] ?? {}}
+                    pumpCells={pumpSeries![week] ?? {}}
+                    component={component}
                     selected={country || undefined}
                     heatRange={heatRange}
                     isDark={isDark}
@@ -71,7 +81,7 @@ function App() {
                 <div>
                     <h1 className="font-heading text-500 font-semibold leading-tight">Fuel Mood</h1>
                     <p className="text-200 text-muted-foreground">
-                        EU-27 · {fuelLabel} · Bulletin week {week ? formatWeek(week) : "…"}
+                        EU-27 · {fuelLabel} · {priceComponent.name} · Bulletin week {week ? formatWeek(week) : "…"}
                     </p>
                 </div>
             </header>
@@ -87,6 +97,20 @@ function App() {
                             )}>
                             {f.label}
                         </button>
+                    ))}
+                </div>
+                <div role="radiogroup" aria-label="Price component" className="flex rounded-full border border-border bg-glass p-100 shadow-16 backdrop-blur-md">
+                    {PRICE_COMPONENTS.map((c) => (
+                        <HoverTip key={c.code} side="bottom" tip={COMPONENT_TIP[c.code]}>
+                            <button type="button" role="radio" aria-checked={component === c.code}
+                                onClick={() => { setComponent(c.code); setHeatRange(undefined); }}
+                                className={cn(
+                                    "rounded-full px-400 py-100 text-300 font-medium focus-visible:outline-2 focus-visible:outline-ring",
+                                    component === c.code ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                                )}>
+                                {c.label}
+                            </button>
+                        </HoverTip>
                     ))}
                 </div>
                 <a href="#info"
@@ -110,7 +134,7 @@ function App() {
             {weather && series && week && (
                 <>
                     <div className="absolute bottom-[7.5rem] left-400 xl:bottom-400">
-                        <Legend bands={weather.bands} baselineWeek={baselineWeek ? formatWeek(baselineWeek) : "baseline"}
+                        <Legend bands={weather.bands} component={component} componentName={priceComponent.name} baselineWeek={baselineWeek ? formatWeek(baselineWeek) : "baseline"}
                             heatRange={heatRange} onHeatRange={setHeatRange}
                             markerStyle={markerStyle} onMarkerStyle={setMarkerStyle}
                             markerValue={markerValue} onMarkerValue={setMarkerValue} />
@@ -119,7 +143,9 @@ function App() {
                     <div className="absolute bottom-[7.5rem] right-400 top-[5.5rem] xl:bottom-400">
                         <CountryPanel
                             view={view} onView={setView} country={country || undefined} names={names} fuelLabel={fuelLabel}
-                            weeks={weeks} index={index} series={series} pySeries={weather.previousYear.fuels[fuel]} bands={weather.bands} markerStyle={markerStyle}
+                            component={component} componentName={priceComponent.name}
+                            pumpSeries={pumpSeries!} netSeries={weather.net[fuel]} taxesSeries={weather.taxes[fuel]}
+                            weeks={weeks} index={index} series={series} pySeries={componentPySeries(weather, component, fuel)} bands={weather.bands} markerStyle={markerStyle}
                             onSelect={(code) => setCountry(code ?? "")}
                             onIndex={(i) => { setPlaying(false); setWeekIndex(i); }}
                         />
@@ -136,6 +162,12 @@ function App() {
         </div>
     );
 }
+
+const COMPONENT_TIP: Record<PriceComponent, string> = {
+    pump: "Pump price: what you pay, taxes included",
+    net: "Net price: without taxes, moves with the market",
+    taxes: "Taxes: Pump price − Net price, in €/L",
+};
 
 /** Tiny hash router: `#info` opens the Additional info page, anything else is the map. */
 function useHashPage() {

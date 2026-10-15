@@ -9,7 +9,9 @@ Each Country gets:
 - a **mood face** for this week's price change (Delighted → Furious);
 - a **thermometer colour** for the change since the February 2026 baseline.
 
-Click a Country to see its price, its week-by-week moods and its price trend against last year. Press ▶ to replay the weeks since February.
+Switch the **price component** between **Pump** (with taxes, the default), **Net** (without taxes) and **Taxes** (Pump − Net, in €/L) to see whether a change came from the market or from taxes; every mood, colour and chart follows the switch.
+
+Click a Country to see its price, its **price breakdown** (Net price + Taxes, and how each changed since February), its week-by-week moods and its price trend against last year. Press ▶ to replay the weeks since February.
 
 ## Quick start
 
@@ -42,12 +44,13 @@ The data is committed in `public/`, so the site works offline. There are no API 
   - Vite, React, TypeScript and Tailwind CSS;
   - the map uses [MapLibre GL JS](https://maplibre.org/) through react-map-gl, with no basemap: only country shapes from Natural Earth.
 - **Data:**
-  - `public/weather.json` is a snapshot computed by `scripts/refresh-data.mjs` from the EC Weekly Oil Bulletin;
+  - `public/weather.json` is a snapshot computed by `scripts/refresh-data.mjs` from the EC Weekly Oil Bulletin: the `Prices with taxes` sheet gives the Pump price, `Prices wo taxes` the Net price, and Taxes are their difference;
+  - it holds the Pump price under `fuels` and the other components under `net` and `taxes`, in the same shape (also under `previousYear`);
   - a scheduled GitHub Actions workflow refreshes it every Tuesday and redeploys GitHub Pages;
   - why it works this way: [docs/adr/0001-committed-data-snapshot.md](docs/adr/0001-committed-data-snapshot.md).
 - **Terms:** Weather, Heat, Baseline price and the other terms are defined in [CONTEXT.md](CONTEXT.md).
 
-Prices are national weekly averages including taxes, not live pump prices.
+Prices are national weekly averages (with and without taxes), not live pump prices.
 
 ## Deploying to GitHub Pages
 

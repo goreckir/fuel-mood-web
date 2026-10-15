@@ -42,9 +42,13 @@ export function InfoPage({ bands, onBack }: { bands: Band[]; onBack: () => void 
                     <h2 className="font-heading text-500 font-semibold">Weekly change, change vs baseline and the Baseline price</h2>
                     <dl className="grid gap-300 text-300 sm:grid-cols-[10rem_1fr]">
                         <dt className="font-semibold">Baseline price</dt>
-                        <dd className="text-muted-foreground">For each country and fuel, the price in the last Bulletin week before 28 February 2026 (23 Feb 2026).</dd>
+                        <dd className="text-muted-foreground">For each country, fuel and price component, the value in the last Bulletin week before 28 February 2026 (23 Feb 2026).</dd>
                         <dt className="font-semibold">vs baseline</dt>
-                        <dd className="text-muted-foreground">Change since the Baseline price, in percent. Shown as the country colour: cold blue at 0%, yellow at +25%, hot red at +50% and above.</dd>
+                        <dd className="text-muted-foreground">
+                            Change since the Baseline price, in percent. Shown as the country colour, on a scale that fits each price component:
+                            Pump price runs from cold blue at 0% through yellow at +25% to hot red at +50% and above; Net price from 0% to +100%;
+                            Taxes from blue at −25% (a tax cut) through grey at 0% to red at +25% (a tax rise).
+                        </dd>
                         <dt className="font-semibold">Weather</dt>
                         <dd className="text-muted-foreground">Change against the previous Bulletin week. Shown as a mood face by default (switch to arrows or weather icons in the legend). Bands:</dd>
                     </dl>
@@ -57,6 +61,31 @@ export function InfoPage({ bands, onBack }: { bands: Band[]; onBack: () => void 
                             </li>
                         ))}
                     </ul>
+                </section>
+
+                <section className="space-y-300">
+                    <h2 className="font-heading text-500 font-semibold">Market or taxes? Price components</h2>
+                    <p className="text-300 text-muted-foreground">
+                        The Bulletin publishes every price both with and without taxes. The switch next to the fuel picks which one the whole map,
+                        the weekly moods, the change vs baseline and the price trend are computed from. The mood bands are the same for all three,
+                        so a mood means the same thing whichever you look at.
+                    </p>
+                    <dl className="grid gap-300 text-300 sm:grid-cols-[10rem_1fr]">
+                        <dt className="font-semibold">Pump price</dt>
+                        <dd className="text-muted-foreground">The price including all taxes: what you pay at the pump, as a national average. This is the default.</dd>
+                        <dt className="font-semibold">Net price</dt>
+                        <dd className="text-muted-foreground">The price without taxes. It moves with the market: crude oil, refining and distribution margins.</dd>
+                        <dt className="font-semibold">Taxes</dt>
+                        <dd className="text-muted-foreground">
+                            Pump price minus Net price, in €/L: VAT, excise and other indirect taxes summed together. Because VAT is a percentage of the price,
+                            Taxes also move a little when the market moves, even when no tax rule changes. A sharp fall usually means a tax cut.
+                        </dd>
+                    </dl>
+                    <p className="text-300 text-muted-foreground">
+                        The country panel always shows the <i>Price breakdown</i>: this week's Pump price split into Net price and Taxes, with the tax share,
+                        and the change since the baseline split the same way. For example, Poland's VAT cut in spring 2026 shows as a clear fall in Taxes
+                        while the Net price kept rising.
+                    </p>
                 </section>
 
                 <section className="space-y-300">

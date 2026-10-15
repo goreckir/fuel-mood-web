@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
-import { BAND_CLASS, bandLabel, formatWeek, signed, type Band, type Cell, type MarkerStyle } from "./data";
+import { BAND_CLASS, bandLabel, euro, formatWeek, signed, taxShareLabel, type Band, type Cell, type MarkerStyle } from "./data";
 
 const CARD = "pointer-events-none rounded-lg border border-border bg-popover text-popover-foreground shadow-16";
 
@@ -51,7 +51,7 @@ export function WeekTip({ week, cell, bands, markerStyle }: { week: string; cell
             <BandGlyph band={cell.band} style={markerStyle} />
             {band && <span className={cn("font-medium", BAND_CLASS[cell.band].text)}>{bandLabel(band, markerStyle)}</span>}
             <span className="tabular-nums">{signed(cell.weather)} w/w</span>
-            <span className="tabular-nums text-muted-foreground">€{cell.price.toFixed(3)}</span>
+            <span className="tabular-nums text-muted-foreground">{euro(cell.price)}</span>
         </span>
     );
 }
@@ -62,6 +62,10 @@ type CountryCardProps = {
     fuelLabel: string;
     week: string;
     cell: Cell;
+    /** Name of the selected Price component, e.g. "Net price". */
+    componentName: string;
+    /** Pump price of the same week, given in the Taxes view to show the tax share. */
+    pumpPrice?: number;
     bands: Band[];
     markerStyle: MarkerStyle;
     /** Position in px inside the map container (the card sits above this point). */
@@ -70,7 +74,7 @@ type CountryCardProps = {
 };
 
 /** Hover card for a Country on the map. */
-export function CountryCard({ name, code, fuelLabel, week, cell, bands, markerStyle, x, y }: CountryCardProps) {
+export function CountryCard({ name, code, fuelLabel, week, cell, componentName, pumpPrice, bands, markerStyle, x, y }: CountryCardProps) {
     const band = bands.find((b) => b.BandCode === cell.band);
     return (
         <div role="tooltip" className={cn(CARD, "absolute z-20 w-60 p-300 text-200")}
@@ -82,7 +86,8 @@ export function CountryCard({ name, code, fuelLabel, week, cell, bands, markerSt
             <div className="mt-200 flex items-center gap-200">
                 <BandGlyph band={cell.band} style={markerStyle} className={markerStyle === "weather" ? "text-500" : "icon-size-500"} />
                 <div>
-                    <div className="font-numeric text-400 font-semibold tabular-nums">€{cell.price.toFixed(3)}<span className="text-200 text-muted-foreground"> /L</span></div>
+                    <div className="text-muted-foreground">{componentName}</div>
+                    <div className="font-numeric text-400 font-semibold tabular-nums">{euro(cell.price)}<span className="text-200 text-muted-foreground"> /L</span></div>
                     {band && <div className={cn("font-medium", BAND_CLASS[cell.band].text)}>{bandLabel(band, markerStyle)}</div>}
                 </div>
             </div>
@@ -92,7 +97,11 @@ export function CountryCard({ name, code, fuelLabel, week, cell, bands, markerSt
                 <dt className="text-muted-foreground">vs baseline ({formatWeek(cell.baselineWeek, "short")})</dt>
                 <dd className="text-right font-semibold">{signed(cell.heat)}</dd>
                 <dt className="text-muted-foreground">Baseline price</dt>
-                <dd className="text-right">€{cell.baseline.toFixed(3)}</dd>
+                <dd className="text-right">{euro(cell.baseline)}</dd>
+                {pumpPrice !== undefined && (<>
+                    <dt className="text-muted-foreground">Tax share of Pump price</dt>
+                    <dd className="text-right">{taxShareLabel(cell.price, pumpPrice)}</dd>
+                </>)}
             </dl>
             <div className="mt-200 text-muted-foreground">Bulletin week {formatWeek(week)} · click for details</div>
         </div>

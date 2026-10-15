@@ -4,7 +4,12 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
 import { HoverTip, WeekTip } from "./Tooltip";
-import { BAND_CLASS, HEAT_MAX, bandLabel, changeOver, formatWeek, signed, type Band, type Cell, type MarkerStyle, type PyCell } from "./data";
+import {
+    BAND_CLASS, HEAT_SCALES, bandLabel, changeOver, euro, formatWeek, heatGradient, heatPosition, signed, taxShareLabel,
+    type Band, type Cell, type HeatScale, type MarkerStyle, type PriceComponent, type PyCell,
+} from "./data";
+
+type Series = Record<string, Record<string, Cell>>;
 
 type Props = {
     view: "country" | "ranking";
@@ -12,9 +17,16 @@ type Props = {
     country?: string;
     names: Record<string, string>;
     fuelLabel: string;
+    component: PriceComponent;
+    /** Name of the selected Price component, e.g. "Net price". */
+    componentName: string;
     weeks: string[];
     index: number;
-    series: Record<string, Record<string, Cell>>;
+    /** The selected Price component; the three below feed the Price breakdown whatever is selected. */
+    series: Series;
+    pumpSeries: Series;
+    netSeries: Series;
+    taxesSeries: Series;
     /** Previous-year window for the PY trend overlay. */
     pySeries: Record<string, Record<string, PyCell>>;
     bands: Band[];
@@ -51,12 +63,17 @@ export function CountryPanel(props: Props) {
     );
 }
 
-function CountryDetails({ country, names, fuelLabel, weeks, index, series, pySeries, bands, markerStyle, onSelect, onIndex }: Props) {
+function CountryDetails(props: Props) {
+    const { country, names, fuelLabel, component, componentName, weeks, index, series, pySeries, bands, markerStyle, onSelect, onIndex } = props;
     const cell = country ? series[weeks[index]]?.[country] : undefined;
     if (!country || !cell) {
         return <p className="py-800 text-center text-300 text-muted-foreground">Click a country on the map to see its price weather.</p>;
     }
     const band = bands.find((b) => b.BandCode === cell.band)!;
+    const scale = HEAT_SCALES[component];
+    const pump = props.pumpSeries[weeks[index]]?.[country];
+    const net = props.netSeries[weeks[index]]?.[country];
+    const taxes = props.taxesSeries[weeks[index]]?.[country];
     const windows = [
         { label: "1 week", value: cell.weather },
         { label: "4 weeks", value: changeOver(series, weeks, index, country, 4) },
@@ -80,17 +97,22 @@ function CountryDetails({ country, names, fuelLabel, weeks, index, series, pySer
             <div className="flex items-center gap-400">
                 <BandGlyph band={cell.band} style={markerStyle} className={markerStyle === "weather" ? "text-[length:var(--icon-size-700)]" : "icon-size-700"} />
                 <div>
-                    <div className="font-numeric text-600 font-semibold tabular-nums">€{cell.price.toFixed(3)}<span className="text-300 text-muted-foreground"> /L</span></div>
+                    <div className="text-200 text-muted-foreground">
+                        {componentName}{component === "taxes" && pump && <> · {taxShareLabel(cell.price, pump.price)} of Pump price</>}
+                    </div>
+                    <div className="font-numeric text-600 font-semibold tabular-nums">{euro(cell.price)}<span className="text-300 text-muted-foreground"> /L</span></div>
                     <div className="text-300"><span className={cn("font-semibold", BAND_CLASS[cell.band].text)}>{bandLabel(band, markerStyle)}</span> · <span className="tabular-nums">{signed(cell.weather)} w/w · {signed(cell.heat, 0)} vs Feb</span></div>
                 </div>
             </div>
 
+            {pump && net && taxes && <PriceBreakdown component={component} pump={pump} net={net} taxes={taxes} />}
+
             <div className="grid grid-cols-2 gap-200">
-                <Stat label="Baseline price" value={`€${cell.baseline.toFixed(3)}`} hint={formatWeek(cell.baselineWeek)} />
+                <Stat label="Baseline price" value={euro(cell.baseline)} hint={formatWeek(cell.baselineWeek)} />
                 <Stat label="vs baseline" value={signed(cell.heat)} hint={`since ${formatWeek(cell.baselineWeek, "short")}`}>
                     <div className="mt-100 h-100 rounded-full bg-muted">
                         <div className="h-100 rounded-full"
-                            style={{ width: `${Math.min(100, Math.max(0, cell.heat) / HEAT_MAX * 100)}%`, background: "linear-gradient(90deg, var(--color-heat-cold), var(--color-heat-warm), var(--color-heat-hot))" }} />
+                            style={{ width: `${heatPosition(cell.heat, scale) * 100}%`, background: heatGradient(scale) }} />
                     </div>
                 </Stat>
             </div>
@@ -128,7 +150,7 @@ function CountryDetails({ country, names, fuelLabel, weeks, index, series, pySer
                 </div>
             </div>
 
-            <PyTrendStrip weeks={weeks} index={index} series={series} pySeries={pySeries} country={country} onIndex={onIndex} />
+            <PyTrendStrip weeks={weeks} index={index} series={series} pySeries={pySeries} scale={scale} country={country} onIndex={onIndex} />
         </div>
     );
 }
@@ -138,12 +160,12 @@ const HALO = { paintOrder: "stroke" as const, stroke: "var(--color-card)", strok
 
 const CHART_W = 360, CHART_H = 130, PAD_L = 4, PAD_R = 74, PAD_Y = 14;
 
-/** Thermometer gradient mapped onto the chart's y axis (baseline = cold, +HEAT_MAX% = hot). */
-function HeatGradient({ id, y0, y1 }: { id: string; y0: number; y1: number }) {
+/** Thermometer gradient mapped onto the chart's y axis (scale min = cold, scale max = hot). */
+function HeatGradient({ id, y0, y1, scale }: { id: string; y0: number; y1: number; scale: HeatScale }) {
     return (
         <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={y0} y2={y1}>
             <stop offset="0" stopColor="var(--color-heat-cold)" />
-            <stop offset="0.5" stopColor="var(--color-heat-warm)" />
+            <stop offset="0.5" stopColor={`var(--color-heat-${scale.mid})`} />
             <stop offset="1" stopColor="var(--color-heat-hot)" />
         </linearGradient>
     );
@@ -154,7 +176,7 @@ function HeatGradient({ id, y0, y1 }: { id: string; y0: number; y1: number }) {
  * Both are % change against their own Baseline (last Bulletin week before 28 Feb), aligned week by week from it;
  * the 0% line is labelled at its left end with both baseline prices.
  */
-function PyTrendStrip({ weeks, index, series, pySeries, country, onIndex }: Pick<Props, "weeks" | "index" | "series" | "pySeries" | "onIndex"> & { country: string }) {
+function PyTrendStrip({ weeks, index, series, pySeries, scale, country, onIndex }: Pick<Props, "weeks" | "index" | "series" | "pySeries" | "onIndex"> & { scale: HeatScale; country: string }) {
     const [hover, setHover] = useState<number>();
     const pyWeeks = Object.keys(pySeries).sort();
     const now = weeks.map((w) => series[w]?.[country]?.heat);
@@ -188,15 +210,15 @@ function PyTrendStrip({ weeks, index, series, pySeries, country, onIndex }: Pick
                 {/* Two aligned rows: the "=" signs line up because the labels sit in their own column */}
                 <dl className="mt-100 grid grid-cols-[auto_1fr] gap-x-200 tabular-nums">
                     <dt>Solid</dt>
-                    <dd>= {year} (baseline €{base?.baseline.toFixed(3)}, {base && formatWeek(base.baselineWeek, "short")})</dd>
+                    <dd>= {year} (baseline {base && euro(base.baseline)}, {base && formatWeek(base.baselineWeek, "short")})</dd>
                     <dt>Dotted</dt>
-                    <dd>= {pyYear} (baseline €{pyBase?.baseline.toFixed(3)}, {pyBase && formatWeek(pyBase.baselineWeek, "short")})</dd>
+                    <dd>= {pyYear} (baseline {pyBase && euro(pyBase.baseline)}, {pyBase && formatWeek(pyBase.baselineWeek, "short")})</dd>
                 </dl>
             </div>
             <div className="relative rounded-lg border border-border p-200" onMouseLeave={() => setHover(undefined)}>
                 <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="block h-auto w-full text-muted-foreground" role="img"
                     aria-label={`Change since baseline for ${country}: ${year} ${now[nowEnd] !== undefined ? signed(now[nowEnd]!) : ""}, ${pyYear} ${py[pyEnd] !== undefined ? signed(py[pyEnd]!) : ""}`}>
-                    <defs><HeatGradient id={gradientId} y0={y(0)} y1={y(HEAT_MAX)} /></defs>
+                    <defs><HeatGradient id={gradientId} y0={y(scale.min)} y1={y(scale.max)} scale={scale} /></defs>
                     <line x1={PAD_L} x2={x(Math.max(nowEnd, pyEnd))} y1={y(0)} y2={y(0)} stroke="currentColor" strokeOpacity={0.7} strokeDasharray="4 3" />
                     <path d={path(py)} fill="none" stroke="currentColor" strokeOpacity={0.6} strokeWidth={2} strokeDasharray="1 3" strokeLinecap="round" />
                     <path d={path(now)} fill="none" stroke={`url(#${gradientId})`} strokeWidth={2.5} strokeLinejoin="round" />
@@ -239,6 +261,42 @@ function PyTrendStrip({ weeks, index, series, pySeries, country, onIndex }: Pick
                     <span>{formatWeek(weeks[weeks.length - 1], "short")}</span>
                 </div>
             </div>
+        </div>
+    );
+}
+
+/**
+ * Price breakdown for the Selected week: the Pump price split into Net price and Taxes (with the tax share),
+ * and the change since the Baseline split the same way. Shown whatever the Price component; the selected one is bold.
+ */
+function PriceBreakdown({ component, pump, net, taxes }: { component: PriceComponent; pump: Cell; net: Cell; taxes: Cell }) {
+    const delta = (c: Cell) => euro(c.price - c.baseline, true).replace("€", "");
+    const netShare = Math.min(100, Math.max(0, (net.price / pump.price) * 100));
+    const rows = [
+        { code: "net", label: "Net price", swatch: "bg-primary", cell: net },
+        { code: "taxes", label: `Taxes (${taxShareLabel(taxes.price, pump.price)})`, swatch: "bg-muted-foreground/40", cell: taxes },
+        { code: "pump", label: "Pump price", swatch: undefined, cell: pump },
+    ] as const;
+    return (
+        <div className="rounded-lg border border-border p-300">
+            <h3 className="mb-200 text-200 font-semibold tracking-widest text-muted-foreground">PRICE BREAKDOWN</h3>
+            <div className="flex h-200 overflow-hidden rounded-full bg-muted-foreground/40" role="img"
+                aria-label={`Pump price ${euro(pump.price)}: Net price ${euro(net.price)}, Taxes ${euro(taxes.price)}`}>
+                <div className="bg-primary" style={{ width: `${netShare}%` }} />
+            </div>
+            <dl className="mt-200 grid grid-cols-[1fr_auto] gap-x-300 gap-y-100 text-200 tabular-nums">
+                {rows.map(({ code, label, swatch, cell }) => (
+                    <div key={code} className={cn("contents", code === component && "font-semibold")}>
+                        <dt className={cn("flex items-center gap-100", code === "pump" && "border-t border-border pt-100")}>
+                            <span className={cn("size-200 rounded-sm", swatch)} aria-hidden />{label}
+                        </dt>
+                        <dd className={cn("text-right", code === "pump" && "border-t border-border pt-100")}>{euro(cell.price)}</dd>
+                    </div>
+                ))}
+            </dl>
+            <p className="mt-200 border-t border-border pt-200 text-200 tabular-nums text-muted-foreground">
+                Since {formatWeek(pump.baselineWeek, "short")}: Δ Pump {delta(pump)} = Δ Net {delta(net)} + Δ Taxes {delta(taxes)} €/L
+            </p>
         </div>
     );
 }

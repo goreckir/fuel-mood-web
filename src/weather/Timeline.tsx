@@ -18,7 +18,7 @@ type Props = {
 
 /** Week slider with Play; above each week the EU-27 average Weather, so the timeline doubles as an EU Weather strip. */
 export function Timeline({ weeks, series, bands, index, playing, markerStyle, onIndex, onPlaying }: Props) {
-    const eu = euAverageWeather(series[weeks[index]]);
+    const eu = euAverageWeather(series[weeks[index]] ?? {});
     return (
         <section aria-label="Bulletin week" className="flex w-full max-w-4xl items-center gap-400 rounded-xl border border-border bg-glass px-400 py-300 shadow-16 backdrop-blur-md">
             <button
@@ -34,14 +34,14 @@ export function Timeline({ weeks, series, bands, index, playing, markerStyle, on
                 {/* One equal column per week, so the row always fits the slider width; glyphs shrink when space is tight */}
                 <div className="grid" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }} aria-hidden>
                     {weeks.map((w, i) => (
-                        <HoverTip key={w} className="min-w-0 justify-center" tip={<span className="tabular-nums"><b>{formatWeek(w, "short")}</b> · EU-27 average {signed(euAverageWeather(series[w]), 2)} w/w</span>}>
+                        <HoverTip key={w} className="min-w-0 justify-center" tip={<span className="tabular-nums"><b>{formatWeek(w, "short")}</b> · EU-27 average {signed(euAverageWeather(series[w] ?? {}), 2)} w/w</span>}>
                             <button
                                 type="button"
                                 tabIndex={-1}
                                 onClick={() => { onPlaying(false); onIndex(i); }}
                                 className={cn("flex w-full min-w-0 justify-center text-200 leading-none transition-opacity", i === index ? "scale-125" : "opacity-60 hover:opacity-100")}
                             >
-                                <BandGlyph band={bandFor(euAverageWeather(series[w]), bands).BandCode} style={markerStyle}
+                                <BandGlyph band={bandFor(euAverageWeather(series[w] ?? {}), bands).BandCode} style={markerStyle}
                                     className={markerStyle === "weather" ? "text-[length:min(12px,100%)]" : "aspect-square h-auto w-full max-w-4"} />
                             </button>
                         </HoverTip>

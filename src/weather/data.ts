@@ -132,6 +132,13 @@ export function gapColour(gap: number, c: GapColours) {
     return `#${[0, 1, 2].map((i) => Math.round(ch(from, i) + (ch(to, i) - ch(from, i)) * k).toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** Dark or white text, whichever reads better on a given background (WCAG relative luminance). */
+export function textOn(bg: string) {
+    const lin = (i: number) => { const c = parseInt(bg.slice(1 + 2 * i, 3 + 2 * i), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+    const l = 0.2126 * lin(0) + 0.7152 * lin(1) + 0.0722 * lin(2);
+    return l > 0.4 ? "#111827" : "#ffffff";
+}
+
 /**
  * Last available value at or before the Selected week (a Country without a price that week keeps its last one,
  * labelled with that Bulletin week).

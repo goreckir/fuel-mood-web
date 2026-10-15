@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import Map, { Layer, Source } from "react-map-gl/maplibre";
+import Map, { Layer, Marker, Source } from "react-map-gl/maplibre";
 
-import { GAP_SCALE, cssVar, euro, formatWeek, gapGradient, signed, type Geo } from "./data";
+import { cn } from "@/lib/utils";
+import { GAP_SCALE, cssVar, euro, formatWeek, gapColour, gapGradient, signed, textOn, type Geo } from "./data";
 import type { CompareRow } from "./CompareList";
 
 const EMPTY_STYLE = { version: 8 as const, sources: {}, layers: [] };
@@ -94,6 +95,33 @@ export function CompareMap({ geo, rows, componentName, week, selected, hovered, 
                     <Layer id="compare-selected" type="line" filter={["==", ["get", "code"], selected ?? ""]}
                         paint={{ "line-color": colours.selected, "line-width": 2.5 }} />
                 </Source>
+
+                {/* Price level label per Country, e.g. "€1.80" (2 decimals to keep the map readable; the list keeps 3) */}
+                {data.features.filter((f) => f.properties.hasData).map((f) => {
+                    const { code, name, labelLon, labelLat } = f.properties;
+                    const row = rows[code];
+                    const bg = gapColour(row.gap, colours);
+                    return (
+                        <Marker key={code} longitude={labelLon} latitude={labelLat} anchor="center"
+                            onClick={(e) => { e.originalEvent.stopPropagation(); onSelect(code); }}>
+                            <button type="button"
+                                aria-label={`${row.rank}. ${name}: ${componentName} ${euro(row.level)}, ${signed(row.gap, 0)} vs EU average`}
+                                onMouseEnter={() => onHover(code)}
+                                onMouseLeave={() => onHover(undefined)}
+                                onFocus={() => onHover(code)}
+                                onBlur={() => onHover(undefined)}
+                                // Same as the map page's Baseline pills: the pill takes the Country's colour, text picks dark/white for contrast
+                                style={{ backgroundColor: bg, color: textOn(bg) }}
+                                className={cn(
+                                    "rounded-full border border-black/15 px-200-nudge py-100-nudge font-numeric text-200 font-bold leading-tight tabular-nums shadow-8 transition-transform",
+                                    "focus-visible:outline-2 focus-visible:outline-ring",
+                                    code === selected ? "scale-110 ring-2 ring-selected" : code === hovered ? "scale-105" : "hover:scale-105",
+                                )}>
+                                €{row.level.toFixed(2)}
+                            </button>
+                        </Marker>
+                    );
+                })}
             </Map>
 
             {tip && tipRow && (

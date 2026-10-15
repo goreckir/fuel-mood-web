@@ -13,7 +13,7 @@ Switch the **price component** between **Pump** (with taxes, the default), **Net
 
 Click a Country to see its price, its **price breakdown** (Net price + Taxes, and how each changed since February), its week-by-week moods and its price trend against last year. Press ▶ to replay the weeks since February.
 
-Open **Compare** in the header for the **Country comparison** (`#compare`): Countries ranked by **price level** (cheapest first) against the European Commission's weighted **EU average**, with bars split into Net price and Taxes so you can see whether a Country is cheap because of the market or because of taxes, and a map coloured by the **gap to the EU average**. It shares the fuel, price component, week and selected Country with the map. The Commission notes that cross-country comparisons have limited validity.
+Switch the header from **Changes** (the mood map) to **Levels** for the **Country comparison** (`#compare`): Countries ranked by **price level** (cheapest first) against the European Commission's weighted **EU average**, with bars split into Net price and Taxes so you can see whether a Country is cheap because of the market or because of taxes, and a map coloured by the **gap to the EU average**. Both pages share the fuel, price component, week and selected Country. The Commission notes that cross-country comparisons have limited validity.
 
 ## Quick start
 

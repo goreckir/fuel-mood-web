@@ -94,9 +94,13 @@ _Avoid_: deviation, spread, premium, Heat
 A Country's position 1–27 by Price level of the selected Price component in the Selected week (1 = lowest). Changes of Rank are not shown.
 _Avoid_: place, position change, ranking
 
+**Mood map**:
+The main page: the map of Weather and Heat per Country, i.e. how much prices changed. Labelled "Changes" in the header.
+_Avoid_: map page, home, Map (as a label: it says nothing about the analysis)
+
 **Country comparison**:
-The page that sets Countries side by side by Price level, with the EU average as the reference. It answers "where in the EU is fuel cheapest or dearest, is that because of Taxes, and how does my Country compare with the EU average?". It shares Fuel, Price component, Selected week and the selected Country with the map page. Cross-country comparisons carry the Bulletin's caveat of limited validity.
-_Avoid_: ranking (that is the panel tab sorted by Weather), league table
+The page that sets Countries side by side by Price level, with the EU average as the reference. Labelled "Levels" in the header. It answers "where in the EU is fuel cheapest or dearest, is that because of Taxes, and how does my Country compare with the EU average?". It shares Fuel, Price component, Selected week and the selected Country with the Mood map. Cross-country comparisons carry the Bulletin's caveat of limited validity.
+_Avoid_: ranking (that is the panel tab sorted by Weather), league table, Compare (as a label: unclear what is compared)
 
 **Price breakdown**:
 For one Country, Fuel and the Selected week: the Pump price split into Net price and Taxes in €/L (with the tax share), plus the change since the Baseline price split the same way (Δ Pump price = Δ Net price + Δ Taxes, in €/L). Shown whatever the Price component.

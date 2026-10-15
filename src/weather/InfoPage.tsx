@@ -91,9 +91,10 @@ export function InfoPage({ bands, backLabel, onBack }: { bands: Band[]; backLabe
                 <section className="space-y-300">
                     <h2 className="font-heading text-500 font-semibold">Country comparison: where is fuel cheapest?</h2>
                     <p className="text-300 text-muted-foreground">
-                        The <i>Compare</i> page in the header sets the countries side by side by <i>price level</i>: how many €/L the selected price
-                        component costs in the selected week, not how much it changed. It shares the fuel, the price component, the week and the selected
-                        country with the map, so you can switch between the two pages without losing your place.
+                        The header switches between two pages. <i>Changes</i> is the mood map: how much prices moved this week and since February.
+                        {" "}<i>Levels</i> sets the countries side by side by <i>price level</i>: how many €/L the selected price component costs in the
+                        selected week, not how much it changed. Both pages share the fuel, the price component, the week and the selected country, so you
+                        can switch between them without losing your place.
                     </p>
                     <dl className="grid gap-300 text-300 sm:grid-cols-[10rem_1fr]">
                         <dt className="font-semibold">EU average</dt>

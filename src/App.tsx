@@ -2,7 +2,7 @@
 // Data is a static snapshot in public/ (see scripts/refresh-data.mjs and docs/adr/0001-committed-data-snapshot.md).
 
 import { useEffect, useMemo, useState } from "react";
-import { ChartBarBig, Info, Map as MapIcon, Moon, Sun } from "lucide-react";
+import { ChartBarBig, Info, Moon, Sun, TrendingUp } from "lucide-react";
 
 import { useThemeContext } from "@/hooks/theme.context";
 import { cn } from "@/lib/utils";
@@ -187,8 +187,8 @@ const PILL_OFF = "text-muted-foreground hover:text-foreground";
 const GROUP = "flex rounded-full border border-border bg-glass p-100 shadow-16 backdrop-blur-md";
 
 const PAGES = [
-    { page: "map", href: "#", label: "Map", Icon: MapIcon, tip: "Price moods on the map" },
-    { page: "compare", href: "#compare", label: "Compare", Icon: ChartBarBig, tip: "Country comparison: price levels vs the EU average" },
+    { page: "map", href: "#", label: "Changes", Icon: TrendingUp, tip: "Price changes: this week's mood and the change since February" },
+    { page: "compare", href: "#compare", label: "Levels", Icon: ChartBarBig, tip: "Price levels: €/L by Country vs the EU average" },
 ] as const;
 
 type HeaderControlsProps = {
@@ -201,7 +201,7 @@ type HeaderControlsProps = {
     onTheme: () => void;
 };
 
-/** Page switch (Map · Compare), Fuel, Price component, Additional info and theme: the same on both pages. */
+/** Page switch (Changes · Levels), Fuel, Price component, Additional info and theme: the same on both pages. */
 function HeaderControls({ page, fuel, onFuel, component, onComponent, isDark, onTheme }: HeaderControlsProps) {
     return (
         <div className="flex flex-wrap items-center justify-end gap-200">

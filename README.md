@@ -13,6 +13,8 @@ Switch the **price component** between **Pump** (with taxes, the default), **Net
 
 Click a Country to see its price, its **price breakdown** (Net price + Taxes, and how each changed since February), its week-by-week moods and its price trend against last year. Press ▶ to replay the weeks since February.
 
+Open **Compare** in the header for the **Country comparison** (`#compare`): Countries ranked by **price level** (cheapest first) against the European Commission's weighted **EU average**, with bars split into Net price and Taxes so you can see whether a Country is cheap because of the market or because of taxes, and a map coloured by the **gap to the EU average**. It shares the fuel, price component, week and selected Country with the map. The Commission notes that cross-country comparisons have limited validity.
+
 ## Quick start
 
 You need [Node.js](https://nodejs.org/) 20.19 or newer.
@@ -46,6 +48,7 @@ The data is committed in `public/`, so the site works offline. There are no API 
 - **Data:**
   - `public/weather.json` is a snapshot computed by `scripts/refresh-data.mjs` from the EC Weekly Oil Bulletin: the `Prices with taxes` sheet gives the Pump price, `Prices wo taxes` the Net price, and Taxes are their difference;
   - it holds the Pump price under `fuels` and the other components under `net` and `taxes`, in the same shape (also under `previousYear`);
+  - `euAverage[component][fuel][week]` holds the EC weighted EU-27 average (the Bulletin's `EU_` columns) in €/L for the Country comparison;
   - a scheduled GitHub Actions workflow refreshes it every Tuesday and redeploys GitHub Pages;
   - why it works this way: [docs/adr/0001-committed-data-snapshot.md](docs/adr/0001-committed-data-snapshot.md).
 - **Terms:** Weather, Heat, Baseline price and the other terms are defined in [CONTEXT.md](CONTEXT.md).

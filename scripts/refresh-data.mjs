@@ -3,7 +3,8 @@
 // Source: European Commission, Weekly Oil Bulletin, "Price developments 2005 onwards"
 // https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en
 // Licence: CC BY 4.0, (c) European Union. Changes (Weather, Heat, bands) are computed here,
-// for each Price component: Pump price, Net price and Taxes (= Pump − Net).
+// for each Price component: Pump price, Net price and Taxes (= Pump − Net). The EU average is the EC's own weighted
+// EU-27 average (the `EU_` columns), copied as is for the same weeks; Fuel Mood doesn't compute it.
 //
 // Usage:
 //   npm run data:refresh                 # download the latest XLSX and rewrite public/weather.json
@@ -32,6 +33,8 @@ const PY_BASELINE_BEFORE = "2025-02-28";
 /** EU-27 only; the history also holds UK and EU/EUR aggregates. */
 const COUNTRIES = ["AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HR", "HU",
     "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK"];
+/** Column code of the EC weighted EU-27 average (not `EUR`, the euro area). */
+const EU_AVERAGE = "EU";
 
 /** WOB column suffix -> Fuel code. */
 const FUELS = { euro95: "e95", diesel: "diesel" };
@@ -62,17 +65,17 @@ async function loadWorkbook(localPath) {
     return workbook;
 }
 
-/** Map of "country|fuel" -> { week (YYYY-MM-DD): price in €/L }. */
-function readPrices(workbook, { name: SHEET, header }) {
+/** Map of "country|fuel" -> { week (YYYY-MM-DD): price in €/L }, for the given column codes. */
+function readPrices(workbook, { name: SHEET, header }, codes = COUNTRIES) {
     const sheet = workbook.getWorksheet(SHEET);
     if (!sheet) throw new Error(`sheet '${SHEET}' not found`);
 
     const columns = new Map();
     sheet.getRow(1).eachCell((cell, col) => {
         const m = header.exec(String(cell.value ?? ""));
-        if (m && COUNTRIES.includes(m[1])) columns.set(col, `${m[1]}|${FUELS[m[2]]}`);
+        if (m && codes.includes(m[1])) columns.set(col, `${m[1]}|${FUELS[m[2]]}`);
     });
-    const missing = COUNTRIES.flatMap((c) => Object.values(FUELS).map((f) => `${c}|${f}`))
+    const missing = codes.flatMap((c) => Object.values(FUELS).map((f) => `${c}|${f}`))
         .filter((key) => ![...columns.values()].includes(key));
     if (missing.length) throw new Error(`columns missing in '${SHEET}': ${missing.join(", ")}`);
 
@@ -147,23 +150,44 @@ function buildComponent(prices) {
 }
 
 /**
+ * EU average per Price component: `euAverage[component][fuel][week]` = €/L, only for the weeks the Countries have
+ * (from the Baseline week on). Taxes = EU Pump − EU Net, like the Countries' Taxes.
+ */
+function buildEuAverage(pumpPrices, netPrices, fuels) {
+    const components = { pump: pumpPrices, net: netPrices, taxes: taxesOf(pumpPrices, netPrices) };
+    const out = {};
+    for (const [component, prices] of Object.entries(components)) {
+        out[component] = {};
+        for (const [fuel, weeks] of Object.entries(fuels)) {
+            const series = prices.get(`${EU_AVERAGE}|${fuel}`) ?? {};
+            out[component][fuel] = Object.fromEntries(Object.keys(weeks).sort()
+                .filter((w) => series[w] !== undefined).map((w) => [w, series[w]]));
+        }
+    }
+    return out;
+}
+
+/**
  * Same shape as the app's `Weather` type in src/weather/data.ts. `fuels` holds the Pump price (unchanged from before
  * Price components existed); `net` and `taxes` are siblings with the same `[fuel][week][country]` shape.
  */
-function buildWeather(pumpPrices, netPrices) {
+function buildWeather(pumpPrices, netPrices, euPump, euNet) {
     const pump = buildComponent(pumpPrices);
     const net = buildComponent(netPrices);
     const taxes = buildComponent(taxesOf(pumpPrices, netPrices));
     return {
         baselineBefore: BASELINE_BEFORE, bands: BANDS, fuels: pump.fuels, net: net.fuels, taxes: taxes.fuels,
         previousYear: { baselineBefore: PY_BASELINE_BEFORE, fuels: pump.pyFuels, net: net.pyFuels, taxes: taxes.pyFuels },
+        // Last, so the Country part of the JSON stays byte-identical to the output before the EU average existed.
+        euAverage: buildEuAverage(euPump, euNet, pump.fuels),
     };
 }
 
 const args = process.argv.slice(2);
 const xlsxIndex = args.indexOf("--xlsx");
 const workbook = await loadWorkbook(xlsxIndex >= 0 ? args[xlsxIndex + 1] : undefined);
-const weather = buildWeather(readPrices(workbook, SHEETS.pump), readPrices(workbook, SHEETS.net));
+const weather = buildWeather(readPrices(workbook, SHEETS.pump), readPrices(workbook, SHEETS.net),
+    readPrices(workbook, SHEETS.pump, [EU_AVERAGE]), readPrices(workbook, SHEETS.net, [EU_AVERAGE]));
 
 const json = JSON.stringify(weather);
 const previous = await readFile(OUT, "utf8").catch(() => "");

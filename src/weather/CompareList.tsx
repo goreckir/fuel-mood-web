@@ -46,11 +46,15 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
     const items: (CompareRow | (EuRow & { code: typeof EU_KEY }))[] = [...rows];
     items.splice(euAt < 0 ? rows.length : euAt, 0, { ...eu, code: EU_KEY });
 
-    // Shared axis: Net grows left of the anchor, Taxes right of it; the whole bar is the Pump price.
+    // Shared axis. Pump: one bar from the left edge (Net, then Taxes), so its length is the Pump price.
+    // Net and Taxes: anchored at the Net | Taxes boundary (Net grows left, Taxes right), so the selected
+    // component starts from the same line in every row.
+    const stacked = component === "pump";
     const maxNet = Math.max(eu.net, ...rows.map((r) => r.net));
     const maxTaxes = Math.max(eu.taxes, ...rows.map((r) => r.taxes));
-    const total = maxNet + maxTaxes;
-    const anchor = (maxNet / total) * 100;
+    const total = stacked ? Math.max(eu.pump, ...rows.map((r) => r.pump)) : maxNet + maxTaxes;
+    const anchor = stacked ? 0 : (maxNet / total) * 100;
+    const pct = (v: number) => (v / total) * 100;
 
     const listRef = useRef<HTMLOListElement>(null);
     const tops = useRef(new Map<string, number>());
@@ -91,14 +95,21 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
             <header className="border-b border-border px-400 pb-200 pt-300">
                 <h2 className="font-heading text-400 font-semibold">{componentName} by Country · {fuelLabel}</h2>
                 <p className="text-200 text-muted-foreground">Cheapest first · {formatWeek(week)} · Gap to the EU average</p>
-                <div className="mt-200 grid grid-cols-[1.5rem_minmax(0,1fr)_3.5rem] gap-x-200 gap-y-100 text-100 font-semibold uppercase tracking-wider text-muted-foreground sm:grid-cols-[1.5rem_8.5rem_minmax(0,1fr)_3.5rem]" aria-hidden>
+                <div className="mt-200 grid grid-cols-[1.5rem_minmax(0,1fr)_4rem_3.5rem] gap-x-200 gap-y-100 text-100 font-semibold uppercase tracking-wider text-muted-foreground sm:grid-cols-[1.5rem_8.5rem_4rem_minmax(0,1fr)_3.5rem]" aria-hidden>
                     <span className="text-right">#</span>
                     <span className="hidden sm:block">Country</span>
-                    <span className="relative col-span-3 col-start-1 row-start-2 mx-[3rem] block h-300 sm:col-span-1 sm:col-start-3 sm:row-start-1">
-                        <span className="absolute mr-100 whitespace-nowrap" style={{ right: `${100 - anchor}%` }}>← Net</span>
-                        <span className="absolute ml-100 whitespace-nowrap" style={{ left: `${anchor}%` }}>Taxes →</span>
+                    <span className="col-start-3 row-start-1 text-right">€/L</span>
+                    <span className="col-start-4 row-start-1 text-right sm:col-start-5">vs EU</span>
+                    <span className="relative col-span-4 col-start-1 row-start-2 mx-100 block h-300 sm:col-span-1 sm:col-start-4 sm:row-start-1">
+                        {stacked ? (
+                            <span className="absolute whitespace-nowrap">Net + Taxes →</span>
+                        ) : (
+                            <>
+                                <span className="absolute mr-100 whitespace-nowrap" style={{ right: `${100 - anchor}%` }}>← Net</span>
+                                <span className="absolute ml-100 whitespace-nowrap" style={{ left: `${anchor}%` }}>Taxes →</span>
+                            </>
+                        )}
                     </span>
-                    <span className="col-start-3 row-start-1 text-right sm:col-start-4">vs EU</span>
                 </div>
             </header>
 
@@ -107,7 +118,8 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
                     const isEu = item.code === EU_KEY;
                     const row = isEu ? undefined : (item as CompareRow);
                     const name = row ? row.name : "EU average";
-                    const valueAt = component === "net" ? anchor - (item.net / total) * 100 : anchor + (item.taxes / total) * 100;
+                    const netLeft = stacked ? 0 : anchor - pct(item.net);
+                    const taxesLeft = stacked ? pct(item.net) : anchor;
                     const stale = item.levelWeek !== week;
                     return (
                         <li key={item.code} data-code={item.code} className="relative">
@@ -123,8 +135,8 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
                                 onFocus={() => onHover(row?.code)}
                                 onBlur={() => onHover(undefined)}
                                 className={cn(
-                                    "grid w-full grid-cols-[1.5rem_minmax(0,1fr)_3.5rem] items-center gap-x-200 gap-y-100 rounded-lg px-200 py-100 text-left text-300",
-                                    "sm:grid-cols-[1.5rem_8.5rem_minmax(0,1fr)_3.5rem]",
+                                    "grid w-full grid-cols-[1.5rem_minmax(0,1fr)_4rem_3.5rem] items-center gap-x-200 gap-y-100 rounded-lg px-200 py-100 text-left text-300",
+                                    "sm:grid-cols-[1.5rem_8.5rem_4rem_minmax(0,1fr)_3.5rem]",
                                     "focus-visible:outline-2 focus-visible:outline-ring",
                                     isEu ? "cursor-default border border-primary/40 bg-primary/10 font-semibold" : "hover:bg-accent",
                                     row && row.code === hovered && "bg-accent",
@@ -137,19 +149,14 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
                                     {component === "taxes" && <span className="ml-100 text-200 font-normal text-muted-foreground">{taxShareLabel(item.taxes, item.pump)} tax</span>}
                                     {stale && <span className="ml-100 text-200 font-normal text-muted-foreground">({formatWeek(item.levelWeek, "short")})</span>}
                                 </span>
-                                {/* On narrow screens the bar takes its own line under the name */}
-                                <span className="relative col-span-3 col-start-1 row-start-2 mx-[3rem] block h-300 sm:col-span-1 sm:col-start-3 sm:row-start-1" aria-hidden>
-                                    <span className="absolute inset-y-0 w-px bg-border" style={{ left: `${anchor}%` }} />
-                                    <span className={cn("absolute inset-y-0 rounded-l-sm transition-[width,right] duration-500", strong.net ? "bg-primary" : "bg-primary/20")}
-                                        style={{ right: `${100 - anchor}%`, width: `${(item.net / total) * 100}%` }} />
-                                    <span className={cn("absolute inset-y-0 rounded-r-sm transition-[width] duration-500", strong.taxes ? "bg-muted-foreground/70" : "bg-muted-foreground/20")}
-                                        style={{ left: `${anchor}%`, width: `${(item.taxes / total) * 100}%` }} />
-                                    {/* €/L of the selected component at the end of its segment (Pump: the bar end) */}
-                                    <span className={cn("absolute top-1/2 -translate-y-1/2 whitespace-nowrap font-numeric text-200 font-semibold tabular-nums transition-[left] duration-500",
-                                        component === "net" ? "-translate-x-full pr-100" : "pl-100")}
-                                        style={{ left: `${valueAt}%` }}>
-                                        {euro(item.level)}
-                                    </span>
+                                <span className="text-right font-numeric text-200 font-semibold tabular-nums">{euro(item.level)}</span>
+                                {/* On narrow screens the bar takes its own line under the name; on wider ones it sits between €/L and vs EU */}
+                                <span className="relative col-span-4 col-start-1 row-start-2 mx-100 block h-300 sm:col-span-1 sm:col-start-4 sm:row-start-1" aria-hidden>
+                                    {!stacked && <span className="absolute inset-y-0 w-px bg-border" style={{ left: `${anchor}%` }} />}
+                                    <span className={cn("absolute inset-y-0 rounded-l-sm transition-[left,width] duration-500", strong.net ? "bg-primary" : "bg-primary/20")}
+                                        style={{ left: `${netLeft}%`, width: `${pct(item.net)}%` }} />
+                                    <span className={cn("absolute inset-y-0 rounded-r-sm transition-[left,width] duration-500", strong.taxes ? "bg-muted-foreground/70" : "bg-muted-foreground/20")}
+                                        style={{ left: `${taxesLeft}%`, width: `${pct(item.taxes)}%` }} />
                                 </span>
                                 <span className="flex items-center justify-end gap-100 font-numeric text-200 tabular-nums">
                                     {row ? (

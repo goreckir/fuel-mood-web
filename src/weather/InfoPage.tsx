@@ -111,8 +111,9 @@ export function InfoPage({ bands, backLabel, onBack }: { bands: Band[]; backLabe
                         <dd className="text-muted-foreground">1–27 by price level of the selected component, 1 being the cheapest. The EU average row sits where it belongs, without a rank.</dd>
                         <dt className="font-semibold">Bars</dt>
                         <dd className="text-muted-foreground">
-                            Each bar is anchored at the boundary between Net price (growing left) and Taxes (growing right), so the whole bar is the Pump price.
-                            The selected component is drawn strong, the other one faint. This shows at a glance whether a country is cheap because of the market or because of taxes.
+                            For the Pump price each bar starts at the left edge, Net price first and Taxes after it, so its length is the Pump price. For Net
+                            price and Taxes the bar is anchored at the boundary between them (Net growing left, Taxes growing right), so the selected component
+                            starts from the same line in every row. The selected component is drawn strong, the other one faint. This shows at a glance whether a country is cheap because of the market or because of taxes.
                         </dd>
                     </dl>
                     <p className="text-300 text-muted-foreground">

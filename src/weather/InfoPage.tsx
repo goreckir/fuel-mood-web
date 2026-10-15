@@ -20,13 +20,13 @@ const SEASONALITY: { year: string; e95Summer: string; e95Sep: string; dieselSumm
     { year: "2026", e95Summer: "+16.0%", e95Sep: "+27.8%", dieselSummer: "+19.7%", dieselSep: "+39.8%", highlight: true },
 ];
 
-export function InfoPage({ bands, onBack }: { bands: Band[]; onBack: () => void }) {
+export function InfoPage({ bands, backLabel, onBack }: { bands: Band[]; backLabel: string; onBack: () => void }) {
     return (
         <div className="h-full overflow-y-auto bg-background">
             <div className="mx-auto max-w-3xl space-y-800 px-400 py-800">
                 <button type="button" onClick={onBack}
                     className="flex items-center gap-100 rounded-lg px-200 py-100 text-300 font-medium text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
-                    <ArrowLeft className="icon-size-200" /> Back to the map
+                    <ArrowLeft className="icon-size-200" /> {backLabel}
                 </button>
 
                 <header>
@@ -85,6 +85,39 @@ export function InfoPage({ bands, onBack }: { bands: Band[]; onBack: () => void 
                         The country panel always shows the <i>Price breakdown</i>: this week's Pump price split into Net price and Taxes, with the tax share,
                         and the change since the baseline split the same way. For example, Poland's VAT cut in spring 2026 shows as a clear fall in Taxes
                         while the Net price kept rising.
+                    </p>
+                </section>
+
+                <section className="space-y-300">
+                    <h2 className="font-heading text-500 font-semibold">Country comparison: where is fuel cheapest?</h2>
+                    <p className="text-300 text-muted-foreground">
+                        The <i>Compare</i> page in the header sets the countries side by side by <i>price level</i>: how many €/L the selected price
+                        component costs in the selected week, not how much it changed. It shares the fuel, the price component, the week and the selected
+                        country with the map, so you can switch between the two pages without losing your place.
+                    </p>
+                    <dl className="grid gap-300 text-300 sm:grid-cols-[10rem_1fr]">
+                        <dt className="font-semibold">EU average</dt>
+                        <dd className="text-muted-foreground">
+                            The European Commission's own weighted EU-27 average from the Bulletin, used as the reference. Its Taxes are the EU average Pump price
+                            minus the EU average Net price. Fuel Mood does not compute it.
+                        </dd>
+                        <dt className="font-semibold">Gap to EU average</dt>
+                        <dd className="text-muted-foreground">
+                            How far a country's price level is from the EU average in the same week, in percent; negative means cheaper. It colours the comparison
+                            map from teal (30% or more below) through grey (the EU average) to purple (30% or more above). It compares countries, never weeks.
+                        </dd>
+                        <dt className="font-semibold">Rank</dt>
+                        <dd className="text-muted-foreground">1–27 by price level of the selected component, 1 being the cheapest. The EU average row sits where it belongs, without a rank.</dd>
+                        <dt className="font-semibold">Bars</dt>
+                        <dd className="text-muted-foreground">
+                            Each bar is anchored at the boundary between Net price (growing left) and Taxes (growing right), so the whole bar is the Pump price.
+                            The selected component is drawn strong, the other one faint. This shows at a glance whether a country is cheap because of the market or because of taxes.
+                        </dd>
+                    </dl>
+                    <p className="text-300 text-muted-foreground">
+                        <b>Limited validity.</b> The Commission warns that its national averages are collected and weighted differently from country to country,
+                        so comparing price levels between countries has limited validity. Read the gaps as an indication, not to the cent.
+                        A country without a price in the selected week keeps its last available price, labelled with that week.
                     </p>
                 </section>
 

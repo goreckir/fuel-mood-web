@@ -19,6 +19,8 @@ export type Weather = {
     taxes: FuelSeries<Cell>;
     /** Same window one year earlier, each Country against its own last Bulletin week before 28 Feb of that year. */
     previousYear: { baselineBefore: string; fuels: FuelSeries<PyCell>; net: FuelSeries<PyCell>; taxes: FuelSeries<PyCell> };
+    /** EU average (EC weighted EU-27) per Price component and Fuel: Bulletin week -> €/L. */
+    euAverage: Record<PriceComponent, Record<FuelCode, Record<string, number>>>;
 };
 
 export const FUELS = [
@@ -109,6 +111,56 @@ export const heatGradient = (scale: HeatScale, direction = "90deg") =>
 
 /** Position of a Heat value on its scale, 0…1, clamped. */
 export const heatPosition = (heat: number, scale: HeatScale) => Math.min(1, Math.max(0, (heat - scale.min) / (scale.max - scale.min)));
+
+/**
+ * Gap to EU average colour scale, in percent: cheaper than the EU average (low) → EU average (mid) → dearer (high),
+ * clamped at ±30%. Its own palette (--color-gap-* tokens), so it doesn't read as Heat ("change").
+ */
+export const GAP_SCALE = { min: -30, max: 30, steps: [-30, -15, 0, 15, 30] } as const;
+
+/** CSS gradient of the Gap to EU average scale, left (min) to right (max). */
+export const gapGradient = (direction = "90deg") =>
+    `linear-gradient(${direction}, var(--color-gap-low), var(--color-gap-mid), var(--color-gap-high))`;
+
+export type GapColours = { low: string; mid: string; high: string };
+
+/** Hex colour of a Gap to EU average, the same linear scale as the comparison map's `fill-color`. */
+export function gapColour(gap: number, c: GapColours) {
+    const v = (Math.min(GAP_SCALE.max, Math.max(GAP_SCALE.min, gap)) - GAP_SCALE.min) / (GAP_SCALE.max - GAP_SCALE.min) * 2;
+    const [from, to, k] = v <= 1 ? [c.low, c.mid, v] : [c.mid, c.high, v - 1];
+    const ch = (hex: string, i: number) => parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16);
+    return `#${[0, 1, 2].map((i) => Math.round(ch(from, i) + (ch(to, i) - ch(from, i)) * k).toString(16).padStart(2, "0")).join("")}`;
+}
+
+/**
+ * Last available value at or before the Selected week (a Country without a price that week keeps its last one,
+ * labelled with that Bulletin week).
+ */
+export function lastAvailable<T>(byWeek: Record<string, T | undefined>, weeks: string[], index: number) {
+    for (let i = index; i >= 0; i--) {
+        const value = byWeek[weeks[i]];
+        if (value !== undefined) return { value, week: weeks[i] };
+    }
+    return undefined;
+}
+
+/** Price level: the €/L of one Price component for a Country in the Selected week (or its last available week). */
+export function priceLevel(series: Record<string, Record<string, Cell>>, weeks: string[], index: number, country: string) {
+    for (let i = index; i >= 0; i--) {
+        const cell = series[weeks[i]]?.[country];
+        if (cell) return { price: cell.price, week: weeks[i] };
+    }
+    return undefined;
+}
+
+/** Gap to EU average in percent (negative = cheaper than the EU average). */
+export const gapToEu = (level: number, euAverage: number) => (level / euAverage - 1) * 100;
+
+/** Rank 1…n by `level`, lowest first; equal levels share a Rank (1, 2, 2, 4). Returns a new array sorted by Rank. */
+export function rank<T extends { level: number }>(items: T[]): (T & { rank: number })[] {
+    const sorted = [...items].sort((a, b) => a.level - b.level);
+    return sorted.map((item, i) => ({ ...item, rank: i > 0 && item.level === sorted[i - 1].level ? sorted.findIndex((x) => x.level === item.level) + 1 : i + 1 }));
+}
 
 /** €/L with 3 decimals, e.g. "€1.734"; `sign` adds + / − for a change. */
 export function euro(v: number, sign = false) {

@@ -15,6 +15,8 @@ Click a Country to see its price, its **price breakdown** (Net price + Taxes, an
 
 Switch the header from **Changes** (the mood map) to **Levels** for the **Country comparison** (`#compare`): Countries ranked by **price level** (cheapest first) against the European Commission's weighted **EU average**, with bars split into Net price and Taxes so you can see whether a Country is cheap because of the market or because of taxes, and a map coloured by the **gap to the EU average**. Both pages share the fuel, price component, week and selected Country. The Commission notes that cross-country comparisons have limited validity.
 
+![Pump, Net and Taxes on the Changes map, then the Levels page over the weeks](docs/media/price-components-and-levels.gif)
+
 ## Quick start
 
 You need [Node.js](https://nodejs.org/) 20.19 or newer.

@@ -2,7 +2,8 @@
 //
 // Source: European Commission, Weekly Oil Bulletin, "Price developments 2005 onwards"
 // https://energy.ec.europa.eu/data-and-analysis/weekly-oil-bulletin_en
-// Licence: CC BY 4.0, (c) European Union. Changes (Weather, Heat, bands) are computed here.
+// Licence: CC BY 4.0, (c) European Union. Changes (Weather, Heat, bands) are computed here,
+// for each Price component: Pump price, Net price and Taxes (= Pump − Net).
 //
 // Usage:
 //   npm run data:refresh                 # download the latest XLSX and rewrite public/weather.json
@@ -18,7 +19,11 @@ const ROOT = resolve(import.meta.dirname, "..");
 const OUT = resolve(ROOT, "public", "weather.json");
 const XLSX_NAME = "Weekly_Oil_Bulletin_Prices_History_maticni_4web.xlsx";
 const XLSX_URL = `https://energy.ec.europa.eu/document/download/906e60ca-8b6a-44e7-8589-652854d2fd3f_en?filename=${XLSX_NAME}`;
-const SHEET = "Prices with taxes";
+/** Bulletin sheets: Pump price (with taxes) and Net price (without taxes); same layout, different column prefix. */
+const SHEETS = {
+    pump: { name: "Prices with taxes", header: /^([A-Z]{2})_price_with_tax_(euro95|diesel)$/ },
+    net: { name: "Prices wo taxes", header: /^([A-Z]{2})_price_wo_tax_(euro95|diesel)$/ },
+};
 
 /** Baseline price: the last Bulletin week before this date (and one year earlier for the Price trend). */
 const BASELINE_BEFORE = "2026-02-28";
@@ -41,8 +46,6 @@ const BANDS = [
     { BandCode: "storm", BandName: "Storm", UpperLimitPct: "", SortOrder: "6" },
 ];
 
-const HEADER = /^([A-Z]{2})_price_with_tax_(euro95|diesel)$/;
-
 const round = (value, digits) => Number(value.toFixed(digits));
 
 async function loadWorkbook(localPath) {
@@ -60,13 +63,13 @@ async function loadWorkbook(localPath) {
 }
 
 /** Map of "country|fuel" -> { week (YYYY-MM-DD): price in €/L }. */
-function readPrices(workbook) {
+function readPrices(workbook, { name: SHEET, header }) {
     const sheet = workbook.getWorksheet(SHEET);
     if (!sheet) throw new Error(`sheet '${SHEET}' not found`);
 
     const columns = new Map();
     sheet.getRow(1).eachCell((cell, col) => {
-        const m = HEADER.exec(String(cell.value ?? ""));
+        const m = header.exec(String(cell.value ?? ""));
         if (m && COUNTRIES.includes(m[1])) columns.set(col, `${m[1]}|${FUELS[m[2]]}`);
     });
     const missing = COUNTRIES.flatMap((c) => Object.values(FUELS).map((f) => `${c}|${f}`))
@@ -93,9 +96,23 @@ function bandFor(change) {
     return (BANDS.find((b) => b.UpperLimitPct === "" || change <= Number(b.UpperLimitPct)) ?? BANDS.at(-1)).BandCode;
 }
 
-/** Same shape as the app's `Weather` type in src/weather/data.ts. */
-function buildWeather(prices) {
-    const out = { baselineBefore: BASELINE_BEFORE, bands: BANDS, fuels: {}, previousYear: { baselineBefore: PY_BASELINE_BEFORE, fuels: {} } };
+/** Taxes = Pump price − Net price per week, only where both exist (€/L, 3 decimals, so Pump = Net + Taxes exactly). */
+function taxesOf(pump, net) {
+    const taxes = new Map();
+    for (const [key, pumpSeries] of pump) {
+        const netSeries = net.get(key) ?? {};
+        const series = {};
+        for (const [week, price] of Object.entries(pumpSeries)) {
+            if (netSeries[week] !== undefined) series[week] = round(price - netSeries[week], 3);
+        }
+        taxes.set(key, series);
+    }
+    return taxes;
+}
+
+/** Cells for one Price component: `fuels[fuel][week][country]` and the previous-year window, each against its own Baseline. */
+function buildComponent(prices) {
+    const fuels = {}, pyFuels = {};
     for (const key of [...prices.keys()].sort()) {
         const [country, fuel] = key.split("|");
         const series = prices.get(key);
@@ -103,7 +120,7 @@ function buildWeather(prices) {
         const baseWeek = weeks.filter((w) => w < BASELINE_BEFORE).at(-1);
         const base = series[baseWeek];
 
-        const fuelOut = (out.fuels[fuel] ??= {});
+        const fuelOut = (fuels[fuel] ??= {});
         weeks.forEach((w, i) => {
             if (w < baseWeek) return;
             const weather = round((series[w] / series[weeks[i - 1]] - 1) * 100, 2);
@@ -118,7 +135,7 @@ function buildWeather(prices) {
         // so week k after 23 Feb 2026 lines up with week k after 24 Feb 2025.
         const pyBaseWeek = weeks.filter((w) => w < PY_BASELINE_BEFORE).at(-1);
         const window = weeks.filter((w) => w >= baseWeek).length;
-        const pyFuel = (out.previousYear.fuels[fuel] ??= {});
+        const pyFuel = (pyFuels[fuel] ??= {});
         for (const w of weeks.filter((w) => w >= pyBaseWeek).slice(0, window)) {
             (pyFuel[w] ??= {})[country] = {
                 price: series[w], baseline: series[pyBaseWeek], baselineWeek: pyBaseWeek,
@@ -126,12 +143,27 @@ function buildWeather(prices) {
             };
         }
     }
-    return out;
+    return { fuels, pyFuels };
+}
+
+/**
+ * Same shape as the app's `Weather` type in src/weather/data.ts. `fuels` holds the Pump price (unchanged from before
+ * Price components existed); `net` and `taxes` are siblings with the same `[fuel][week][country]` shape.
+ */
+function buildWeather(pumpPrices, netPrices) {
+    const pump = buildComponent(pumpPrices);
+    const net = buildComponent(netPrices);
+    const taxes = buildComponent(taxesOf(pumpPrices, netPrices));
+    return {
+        baselineBefore: BASELINE_BEFORE, bands: BANDS, fuels: pump.fuels, net: net.fuels, taxes: taxes.fuels,
+        previousYear: { baselineBefore: PY_BASELINE_BEFORE, fuels: pump.pyFuels, net: net.pyFuels, taxes: taxes.pyFuels },
+    };
 }
 
 const args = process.argv.slice(2);
 const xlsxIndex = args.indexOf("--xlsx");
-const weather = buildWeather(readPrices(await loadWorkbook(xlsxIndex >= 0 ? args[xlsxIndex + 1] : undefined)));
+const workbook = await loadWorkbook(xlsxIndex >= 0 ? args[xlsxIndex + 1] : undefined);
+const weather = buildWeather(readPrices(workbook, SHEETS.pump), readPrices(workbook, SHEETS.net));
 
 const json = JSON.stringify(weather);
 const previous = await readFile(OUT, "utf8").catch(() => "");

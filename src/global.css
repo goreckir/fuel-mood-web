@@ -13,8 +13,13 @@
   --color-map-land: #b9c2cc;                                         /* countries without Bulletin data */
   --color-map-border: #ffffff;
   --color-heat-cold: #4f8fd6;                                     /* Heat 0% */
-  --color-heat-warm: #f5d547;                                     /* Heat +25% */
-  --color-heat-hot: #d7301f;                                      /* Heat +50% and above */
+  --color-heat-warm: #f5d547;                                     /* Heat halfway (Pump +25%, Net +50%) */
+  --color-heat-hot: #d7301f;                                      /* Heat at the scale's max and above */
+  --color-heat-neutral: #f0eee8;                                  /* Heat 0% on the diverging Taxes scale */
+  /* Gap to EU average (Country comparison map): cheaper (low) → EU average (mid) → dearer (high); not the Heat palette */
+  --color-gap-low: #0f8b8d;
+  --color-gap-mid: #e4e2df;
+  --color-gap-high: #7b3fa0;
   --color-selected: #111827;
   --color-glass: rgba(255, 255, 255, 0.82);                          /* floating panels over the map */
   /* Mood faces (Fluent Emoji High Contrast used as a mask), green -> red */
@@ -165,6 +170,10 @@
     --color-heat-cold: #3f7fc9;
     --color-heat-warm: #e8c53a;
     --color-heat-hot: #d7301f;
+    --color-heat-neutral: #c4c9cf;
+    --color-gap-low: #2bb5a8;
+    --color-gap-mid: #59606b;
+    --color-gap-high: #b17ad8;
     --color-selected: #ffffff;
     --color-glass: rgba(10, 22, 36, 0.78);
     --color-mood-falling: #4ade80; --color-mood-sun: #a3e635; --color-mood-sunny-spells: #facc15;

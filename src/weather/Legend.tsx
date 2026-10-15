@@ -3,12 +3,15 @@ import { ChevronDown, ChevronUp, Thermometer } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
-import { BAND_CLASS, HEAT_MAX, MARKER_STYLES, MARKER_VALUES, STYLE_HEADING, bandLabel, bandRange, type Band, type MarkerStyle, type MarkerValue } from "./data";
-
-const HEAT_STEPS = [0, 10, 20, 30, 40, HEAT_MAX];
+import {
+    BAND_CLASS, HEAT_SCALES, MARKER_STYLES, MARKER_VALUES, STYLE_HEADING, bandLabel, bandRange, heatGradient,
+    type Band, type MarkerStyle, type MarkerValue, type PriceComponent,
+} from "./data";
 
 type Props = {
     bands: Band[];
+    component: PriceComponent;
+    componentName: string;
     baselineWeek: string;
     heatRange?: [number, number];
     onHeatRange: (range: [number, number] | undefined) => void;
@@ -18,14 +21,21 @@ type Props = {
     onMarkerValue: (v: MarkerValue) => void;
 };
 
+/** Step label with a typographic minus. */
+const num = (v: number) => (v < 0 ? `−${-v}` : `${v}`);
+
 /** Thermometer (Heat) + Weather bands. Clicking a Heat step highlights its Countries on the map. */
-export function Legend({ bands, baselineWeek, heatRange, onHeatRange, markerStyle, onMarkerStyle, markerValue, onMarkerValue }: Props) {
+export function Legend({ bands, component, componentName, baselineWeek, heatRange, onHeatRange, markerStyle, onMarkerStyle, markerValue, onMarkerValue }: Props) {
     // Collapsed by default on narrower screens so the legend doesn't cover Iberia.
     const [open, setOpen] = useState(() => window.innerWidth >= 1280);
+    const scale = HEAT_SCALES[component];
+    const steps = scale.steps;
+    // A scale that goes below 0 (Taxes) is open-ended at both ends; otherwise only the top step is.
+    const openLow = scale.min < 0;
     return (
         <section aria-label="Legend" className="w-80 rounded-xl border border-border bg-glass p-400 shadow-16 backdrop-blur-md">
             <h2 className="mb-200 flex items-center gap-100 font-heading text-300 font-semibold">
-                <Thermometer className="icon-size-200" aria-hidden /> Price
+                <Thermometer className="icon-size-200 shrink-0" aria-hidden /> <span className="whitespace-nowrap">{componentName}</span>
                 <span className="font-base text-200 font-normal text-muted-foreground">% change vs baseline · {baselineWeek}</span>
                 <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={open ? "Collapse legend" : "Expand legend"}
                     className="ml-auto rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
@@ -34,13 +44,14 @@ export function Legend({ bands, baselineWeek, heatRange, onHeatRange, markerStyl
             </h2>
             <div
                 className="h-200 rounded-full"
-                style={{ background: "linear-gradient(90deg, var(--color-heat-cold), var(--color-heat-warm), var(--color-heat-hot))" }}
+                style={{ background: heatGradient(scale) }}
                 aria-hidden
             />
             <div className="mt-100 grid grid-cols-5 gap-100">
-                {HEAT_STEPS.slice(0, -1).map((from, i) => {
-                    const to = i === HEAT_STEPS.length - 2 ? Infinity : HEAT_STEPS[i + 1];
-                    const active = heatRange?.[0] === from;
+                {steps.slice(0, -1).map((step, i) => {
+                    const from = openLow && i === 0 ? -Infinity : step;
+                    const to = i === steps.length - 2 ? Infinity : steps[i + 1];
+                    const active = heatRange?.[0] === from && heatRange?.[1] === to;
                     return (
                         <button
                             key={from}
@@ -52,7 +63,7 @@ export function Legend({ bands, baselineWeek, heatRange, onHeatRange, markerStyl
                                 active && "bg-primary text-primary-foreground hover:bg-primary",
                             )}
                         >
-                            {to === Infinity ? `${from}+` : `${from}–${to}`}
+                            {from === -Infinity ? `< ${num(to)}` : to === Infinity ? `${num(from)}+` : from === -to ? `±${to}` : `${num(from)}${openLow ? "…" : "–"}${num(to)}`}
                         </button>
                     );
                 })}

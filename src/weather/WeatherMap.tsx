@@ -7,7 +7,7 @@ import Map, { Layer, Marker, Source, type MapRef } from "react-map-gl/maplibre";
 
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
-import { BAND_CLASS, HEAT_MAX, cssVar, signed, type Band, type Cell, type Geo, type MarkerStyle, type MarkerValue } from "./data";
+import { BAND_CLASS, HEAT_SCALES, PRICE_COMPONENTS, cssVar, heatPosition, signed, textOn, type Band, type Cell, type Geo, type HeatScale, type MarkerStyle, type MarkerValue, type PriceComponent } from "./data";
 import { CountryCard } from "./Tooltip";
 
 setWorkerUrl(workerUrl);
@@ -18,19 +18,15 @@ const MARKER_W = 80, MARKER_H = 28;
 const EMPTY_STYLE = { version: 8 as const, sources: {}, layers: [] };
 const EU_BOUNDS: [[number, number], [number, number]] = [[-10.5, 34.5], [34.5, 70.5]];
 
-/** Same linear scale as the `fill-color` interpolate expression (0 → cold, HEAT_MAX/2 → warm, HEAT_MAX → hot), clamped. */
-function heatColour(heat: number, c: { cold: string; warm: string; hot: string }) {
-    const v = Math.min(HEAT_MAX, Math.max(0, heat)) / (HEAT_MAX / 2);
-    const [from, to, k] = v <= 1 ? [c.cold, c.warm, v] : [c.warm, c.hot, v - 1];
+type HeatColours = { cold: string; warm: string; neutral: string; hot: string };
+
+/** Same linear scale as the `fill-color` interpolate expression (min → cold, halfway → mid, max → hot), clamped. */
+function heatColour(heat: number, scale: HeatScale, c: HeatColours) {
+    const v = heatPosition(heat, scale) * 2;
+    const mid = c[scale.mid];
+    const [from, to, k] = v <= 1 ? [c.cold, mid, v] : [mid, c.hot, v - 1];
     const ch = (hex: string, i: number) => parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16);
     return `#${[0, 1, 2].map((i) => Math.round(ch(from, i) + (ch(to, i) - ch(from, i)) * k).toString(16).padStart(2, "0")).join("")}`;
-}
-
-/** Dark or white text, whichever reads better on a given background (WCAG relative luminance). */
-function textOn(bg: string) {
-    const lin = (i: number) => { const c = parseInt(bg.slice(1 + 2 * i, 3 + 2 * i), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
-    const l = 0.2126 * lin(0) + 0.7152 * lin(1) + 0.0722 * lin(2);
-    return l > 0.4 ? "#111827" : "#ffffff";
 }
 
 function readColours() {
@@ -39,6 +35,7 @@ function readColours() {
         border: cssVar("--color-map-border"),
         cold: cssVar("--color-heat-cold"),
         warm: cssVar("--color-heat-warm"),
+        neutral: cssVar("--color-heat-neutral"),
         hot: cssVar("--color-heat-hot"),
         selected: cssVar("--color-selected"),
     };
@@ -53,6 +50,9 @@ function framePadding() {
 type Props = {
     geo: Geo;
     cells: Record<string, Cell>;
+    /** Pump price cells for the same week (tax share in the Taxes view). */
+    pumpCells: Record<string, Cell>;
+    component: PriceComponent;
     selected?: string;
     /** Heat range highlighted from the legend; other Countries are dimmed. */
     heatRange?: [number, number];
@@ -65,7 +65,7 @@ type Props = {
     onSelect: (code: string | undefined) => void;
 };
 
-export function WeatherMap({ geo, cells, selected, heatRange, isDark, markerStyle, markerValue, bands, fuelLabel, week, onSelect }: Props) {
+export function WeatherMap({ geo, cells, pumpCells, component, selected, heatRange, isDark, markerStyle, markerValue, bands, fuelLabel, week, onSelect }: Props) {
     const mapRef = useRef<MapRef>(null);
     const [hovered, setHovered] = useState<string>();
     // Hover card: which Country and where (px inside the map container)
@@ -112,8 +112,9 @@ export function WeatherMap({ geo, cells, selected, heatRange, isDark, markerStyl
     }, [geo, cells, selected, markerValue]);
     useEffect(() => { updateVisible(); }, [updateVisible]);
 
+    const scale = HEAT_SCALES[component];
     const fill = ["case", ["get", "hasData"],
-        ["interpolate", ["linear"], ["get", "heat"], 0, colours.cold, HEAT_MAX / 2, colours.warm, HEAT_MAX, colours.hot],
+        ["interpolate", ["linear"], ["get", "heat"], scale.min, colours.cold, (scale.min + scale.max) / 2, colours[scale.mid], scale.max, colours.hot],
         colours.land];
 
     const tipCell = tip ? cells[tip.code] : undefined;
@@ -181,7 +182,7 @@ export function WeatherMap({ geo, cells, selected, heatRange, isDark, markerStyl
                             onMouseLeave={() => setTip(undefined)}
                             onBlur={() => setTip(undefined)}
                             // Baseline mode: the pill takes the Country's Heat colour, the number picks dark/white text for contrast
-                            style={markerValue === "baseline" ? { backgroundColor: heatColour(cell.heat, colours) } : undefined}
+                            style={markerValue === "baseline" ? { backgroundColor: heatColour(cell.heat, scale, colours) } : undefined}
                             className={cn(
                                 "flex items-center gap-100 rounded-full border px-200 py-100 leading-tight shadow-8 transition-transform",
                                 "focus-visible:outline-2 focus-visible:outline-ring",
@@ -197,7 +198,7 @@ export function WeatherMap({ geo, cells, selected, heatRange, isDark, markerStyl
                                     <span className={cn("font-numeric text-300 font-semibold tabular-nums", BAND_CLASS[cell.band].text)}>{signed(cell.weather)}</span>
                                 </>
                             ) : (
-                                <span className="font-numeric text-300 font-bold tabular-nums" style={{ color: textOn(heatColour(cell.heat, colours)) }}>
+                                <span className="font-numeric text-300 font-bold tabular-nums" style={{ color: textOn(heatColour(cell.heat, scale, colours)) }}>
                                     {signed(cell.heat, 0)}
                                 </span>
                             )}
@@ -208,6 +209,8 @@ export function WeatherMap({ geo, cells, selected, heatRange, isDark, markerStyl
         </Map>
         {tip && tipCell && (
             <CountryCard name={names[tip.code]} code={tip.code} fuelLabel={fuelLabel} week={week} cell={tipCell}
+                componentName={PRICE_COMPONENTS.find((c) => c.code === component)!.name}
+                pumpPrice={component === "taxes" ? pumpCells[tip.code]?.price : undefined}
                 bands={bands} markerStyle={markerStyle} x={tip.x} y={tip.y} />
         )}
         </div>

@@ -1,6 +1,6 @@
 # The data is a committed snapshot, refreshed weekly by a scheduled workflow
 
-The site has no backend and reads no data at runtime from third parties. `public/weather.json` (prices, Weather, Heat and bands derived from the EC Weekly Oil Bulletin) and `public/europe.geojson` (Natural Earth borders) are committed to the repo. Anyone who clones it and runs `npm install && npm run dev` sees a working map offline, with no Python, API keys or accounts. A scheduled GitHub Actions workflow runs `npm run data:refresh` every Tuesday, after the Bulletin's Monday publication. It commits `weather.json` only when the data changed, and that push redeploys GitHub Pages.
+The site has no backend and reads no data at runtime from third parties. `public/weather.json` (prices, Weather, Heat and bands derived from the EC Weekly Oil Bulletin) and `public/europe.geojson` (Natural Earth borders) are committed to the repo. Anyone who clones it and runs `npm install && npm run dev` sees a working map offline, with no Python, API keys or accounts. A scheduled GitHub Actions workflow runs `npm run data:refresh` every Tuesday and Friday. The EC updates the history XLSX a few days after the Bulletin's Monday date, so a Tuesday-only run showed a week that was 8–15 days old; the Friday run picks up the current week. It commits `weather.json` only when the data changed, and that push redeploys GitHub Pages.
 
 Alternatives we rejected:
 

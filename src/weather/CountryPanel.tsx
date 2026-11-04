@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
@@ -39,13 +39,16 @@ type PanelProps = Props & {
     /** "sheet": phone layout inside a bottom or side sheet (no card chrome, Close next to the tabs). */
     variant?: "card" | "sheet";
     onClose?: () => void;
+    /** Desktop card: only the Country's name, mood and price; the chevron shows the details. "All countries" always expands. */
+    collapsed?: boolean;
+    onCollapsed?: (collapsed: boolean) => void;
 };
 
 export function CountryPanel(props: PanelProps) {
-    const { view, onView, variant = "card", onClose } = props;
+    const { view, onView, variant = "card", onClose, onCollapsed } = props;
     const sheet = variant === "sheet";
     return (
-        <aside className={cn("flex flex-col", sheet ? "h-full min-h-0 w-full" : "max-h-full w-96 rounded-xl border border-border bg-glass shadow-28 backdrop-blur-md")}>
+        <aside className={cn("flex flex-col", sheet ? "h-full min-h-0 w-full" : "max-h-full w-80 rounded-xl border border-border bg-glass shadow-28 backdrop-blur-md")}>
             <div role="tablist" className={cn("flex items-center gap-100 border-b border-border p-200", sheet && "px-300 pt-0")}>
                 {(["country", "ranking"] as const).map((v) => (
                     <button
@@ -53,7 +56,7 @@ export function CountryPanel(props: PanelProps) {
                         role="tab"
                         type="button"
                         aria-selected={view === v}
-                        onClick={() => onView(v)}
+                        onClick={() => { onView(v); if (v === "ranking") onCollapsed?.(false); }}
                         className={cn(
                             "flex-1 rounded-lg px-300 py-100 text-300 font-medium focus-visible:outline-2 focus-visible:outline-ring",
                             sheet && "min-h-10",
@@ -137,10 +140,19 @@ function CountryDetails(props: PanelProps) {
                     <div className="text-200 font-semibold tracking-widest text-muted-foreground">{country} · {fuelLabel}</div>
                     <h2 className="font-heading text-600 font-semibold">{names[country]}</h2>
                 </div>
-                {!props.onClose && <button type="button" aria-label="Close" onClick={() => onSelect(undefined)}
-                    className="rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
-                    <X className="icon-size-200" />
-                </button>}
+                <div className="flex items-center gap-100">
+                    {props.onCollapsed && (
+                        <button type="button" aria-label={props.collapsed ? "Show details" : "Hide details"} aria-expanded={!props.collapsed}
+                            title={props.collapsed ? "Show details" : "Hide details"} onClick={() => props.onCollapsed!(!props.collapsed)}
+                            className="rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                            <ChevronDown className={cn("icon-size-200 transition-transform", !props.collapsed && "rotate-180")} />
+                        </button>
+                    )}
+                    {!props.onClose && <button type="button" aria-label="Close" onClick={() => onSelect(undefined)}
+                        className="rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                        <X className="icon-size-200" />
+                    </button>}
+                </div>
             </header>
 
             <div className="flex items-center gap-400">
@@ -154,6 +166,7 @@ function CountryDetails(props: PanelProps) {
                 </div>
             </div>
 
+            {!props.collapsed && <>
             {pump && net && taxes && <PriceBreakdown component={component} pump={pump} net={net} taxes={taxes} />}
 
             <div className="grid grid-cols-2 gap-200">
@@ -200,6 +213,7 @@ function CountryDetails(props: PanelProps) {
             </div>
 
             <PyTrendStrip weeks={weeks} index={index} series={series} pySeries={pySeries} scale={scale} country={country} onIndex={onIndex} />
+            </>}
         </div>
     );
 }

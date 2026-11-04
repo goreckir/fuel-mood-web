@@ -101,11 +101,13 @@ export function ComparePage(props: Props) {
 
     return (
         <div className="flex h-full w-full flex-col overflow-hidden bg-background">
-            <div className={cn("flex items-start justify-between gap-200", wide ? "flex-wrap p-400 pb-200" : "p-300 pb-200", !wide && (short ? "items-center" : "flex-col items-stretch"))}>
-                {brand}
-                {controls}
-                {!wide && short && toggle}
-            </div>
+            {brand}
+            {controls && (
+                <div className={cn("flex items-start justify-between gap-200", wide ? "flex-wrap p-400 pb-200" : "p-300 pb-200", !wide && (short ? "items-center" : "flex-col items-stretch"))}>
+                    {controls}
+                    {!wide && short && toggle}
+                </div>
+            )}
 
             {!wide && !short && <div className="mx-300 mb-200">{toggle}</div>}
 
@@ -117,7 +119,7 @@ export function ComparePage(props: Props) {
             )}
 
             {comparison && week && (
-                <main className={cn("grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-400", wide ? "px-400" : "px-300", wide && "grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)]")}>
+                <main className={cn("grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-400", wide ? "px-400" : "px-300", !controls && "pt-400", wide && "grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)]")}>
                     {showMap && geo && (
                         <div className="relative min-h-0 overflow-hidden rounded-xl border border-border bg-map-sea">
                             <CompareMap geo={geo} rows={comparison.byCode} componentName={componentName} week={week}

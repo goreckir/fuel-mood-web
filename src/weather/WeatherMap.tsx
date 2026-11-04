@@ -46,9 +46,9 @@ function readColours() {
 function framePadding() {
     const w = window.innerWidth;
     // Phones: only the one-row header and the bottom dock (or the landscape timeline) sit over the map.
-    if (matches(SHORT_LANDSCAPE)) return { top: 70, left: 12, right: 12, bottom: 80 };
-    if (matches(COMPACT)) return { top: 80, left: 8, right: 8, bottom: 150 };
-    return { top: 90, left: Math.min(350, w * 0.22), right: Math.min(420, w * 0.28), bottom: w >= 1280 ? 40 : 130 };
+    if (matches(SHORT_LANDSCAPE)) return { top: 110, left: 12, right: 12, bottom: 80 };
+    if (matches(COMPACT)) return { top: 120, left: 8, right: 8, bottom: 150 };
+    return { top: 16, left: Math.min(350, w * 0.22), right: Math.min(360, w * 0.25), bottom: w >= 1280 ? 40 : 130 };
 }
 
 type Props = {

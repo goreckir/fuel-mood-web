@@ -43,6 +43,8 @@ function App() {
     const [sheet, setSheet] = useState<"closed" | "peek" | "expanded">("closed");
     const [legendOpen, setLegendOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [panelState, setPanelState] = usePersistentState<"collapsed" | "expanded">("fw.countryPanel", "collapsed");
+    const panelCollapsed = panelState === "collapsed";
 
     // Bulletin weeks come from the Pump price; every Price component has the same weeks.
     const pumpSeries = weather?.fuels[fuel];
@@ -67,13 +69,21 @@ function App() {
     }
 
     // Fuel, Price component, Selected week and the selected Country live here, so both pages share them.
-    const brand = <Brand subtitle={`EU-27 · ${fuelLabel} · ${priceComponent.name} · Bulletin week ${week ? formatWeek(week) : "…"}`} />;
+    // The scenario in one line: on the map it also says whether the marker numbers are the weekly change or the change since the Baseline.
+    const changeBasis = markerValue === "week" ? "Change vs previous week" : `Change vs baseline ${baselineWeek ? formatWeek(baselineWeek) : "…"}`;
+    const scenario = `EU-27 · ${fuelLabel} · ${priceComponent.name} · Bulletin week ${week ? formatWeek(week) : "…"}${page === "compare" ? "" : ` · ${changeBasis}`}`;
     const onComponent = (c: PriceComponent) => { setComponent(c); setHeatRange(undefined); };
-    const controls = compact
-        ? <CompactHeader page={page === "compare" ? "compare" : "map"} label={`${fuelLabel} · ${priceComponent.label}`}
-            settingsOpen={settingsOpen} onSettings={() => setSettingsOpen(true)} />
-        : <HeaderControls page={page === "compare" ? "compare" : "map"} fuel={fuel} onFuel={setFuel} component={component}
-            onComponent={onComponent} isDark={isDark} onTheme={toggleTheme} />;
+    // Desktop: one bar across the top (brand, controls, scenario line); the map and its panels start below it.
+    const bar = (
+        <TopBar scenario={scenario}>
+            <HeaderControls page={page === "compare" ? "compare" : "map"} fuel={fuel} onFuel={setFuel} component={component}
+                onComponent={onComponent} isDark={isDark} onTheme={toggleTheme} />
+        </TopBar>
+    );
+    const controls = compact && (
+        <CompactHeader page={page === "compare" ? "compare" : "map"} label={`${fuelLabel} · ${priceComponent.label}`}
+            scenario={scenario} settingsOpen={settingsOpen} onSettings={() => setSettingsOpen(true)} />
+    );
     const settings = compact && settingsOpen && (
         <SettingsSheet side={landscape} fuel={fuel} onFuel={setFuel} component={component} onComponent={onComponent}
             isDark={isDark} onTheme={toggleTheme} onClose={() => setSettingsOpen(false)} />
@@ -82,7 +92,7 @@ function App() {
     if (page === "compare") {
         return (
             <>
-                <ComparePage geo={geo} weather={weather} error={error} brand={compact ? null : brand} controls={controls} fuel={fuel} fuelLabel={fuelLabel}
+                <ComparePage geo={geo} weather={weather} error={error} brand={compact ? null : bar} controls={controls || null} fuel={fuel} fuelLabel={fuelLabel}
                     component={component} componentName={priceComponent.name} weeks={weeks} index={index} isDark={isDark}
                     country={country || undefined} onCountry={(code) => setCountry(code ?? "")}
                     playing={playing} onPlaying={setPlaying} onIndex={setWeekIndex} />
@@ -159,7 +169,7 @@ function App() {
             <div className="pointer-events-auto flex flex-wrap gap-200">
                 <Chip onClick={() => { setSheet("closed"); setLegendOpen(true); }} label="Legend">
                     <Thermometer className="icon-size-200 shrink-0" aria-hidden />
-                    <span className="h-200 w-12 rounded-full" style={{ background: heatGradient(HEAT_SCALES[component]) }} aria-hidden />
+                    <span className="h-200 w-12 rounded-full [@media(orientation:landscape)_and_(max-width:759px)]:hidden" style={{ background: heatGradient(HEAT_SCALES[component]) }} aria-hidden />
                 </Chip>
                 <Chip onClick={() => { setLegendOpen(false); setView("ranking"); setSheet("expanded"); }} label="All countries">
                     <ListOrdered className="icon-size-200 shrink-0" aria-hidden />
@@ -237,16 +247,12 @@ function App() {
         );
     }
 
+    const panelOpen = !panelCollapsed || view === "ranking";
     return (
-        <div className="relative h-full w-full overflow-hidden bg-map-sea">
+        <div className="flex h-full w-full flex-col overflow-hidden bg-map-sea">
+            {bar}
+            <div className="relative min-h-0 flex-1">
             {map}
-
-            {/* Brand */}
-            <div className="absolute left-400 top-400">{brand}</div>
-
-            {/* Actions */}
-            <div className="absolute right-400 top-400">{controls}</div>
-
             {status}
 
             {weather && series && week && (
@@ -258,8 +264,8 @@ function App() {
                             markerValue={markerValue} onMarkerValue={setMarkerValue} />
                     </div>
 
-                    <div className="absolute bottom-[7.5rem] right-400 top-[5.5rem] xl:bottom-400">
-                        <CountryPanel
+                    <div className={cn("absolute right-400 top-400", panelOpen && "bottom-[7.5rem] xl:bottom-400")}>
+                        <CountryPanel collapsed={!panelOpen} onCollapsed={(c) => setPanelState(c ? "collapsed" : "expanded")}
                             view={view} onView={setView} country={country || undefined} names={names} fuelLabel={fuelLabel}
                             component={component} componentName={priceComponent.name}
                             pumpSeries={pumpSeries!} netSeries={weather.net[fuel]} taxesSeries={weather.taxes[fuel]}
@@ -269,7 +275,7 @@ function App() {
                         />
                     </div>
 
-                    <div className="pointer-events-none absolute inset-x-400 bottom-400 flex justify-center xl:left-[22rem] xl:right-[26rem]">
+                    <div className="pointer-events-none absolute inset-x-400 bottom-400 flex justify-center xl:left-[22rem] xl:right-[23rem]">
                         <div className="pointer-events-auto w-full">
                             <Timeline weeks={weeks} series={series} bands={weather.bands} index={index} playing={playing} markerStyle={markerStyle}
                                 onIndex={setWeekIndex} onPlaying={setPlaying} />
@@ -277,6 +283,7 @@ function App() {
                     </div>
                 </>
             )}
+            </div>
         </div>
     );
 }
@@ -310,14 +317,18 @@ function useHashPage() {
     return state;
 }
 
-function Brand({ subtitle }: { subtitle: string }) {
+/** Desktop top bar: brand and controls in one row (laid out together, so they can't overlap), the scenario line below. */
+function TopBar({ scenario, children }: { scenario: string; children: ReactNode }) {
     return (
-        <header className="flex items-center gap-300 rounded-xl border border-border bg-glass px-400 py-300 shadow-16 backdrop-blur-md">
-            <span className="text-[length:var(--icon-size-500)] leading-none" aria-hidden>⛽</span>
-            <div className="min-w-0">
-                <h1 className="font-heading text-500 font-semibold leading-tight">Fuel Mood</h1>
-                <p className="text-200 text-muted-foreground">{subtitle}</p>
+        <header className="relative z-10 shrink-0 border-b border-border bg-card shadow-16">
+            <div className="flex flex-wrap items-center justify-between gap-x-400 gap-y-200 px-400 py-200">
+                <div className="flex shrink-0 items-center gap-300">
+                    <span className="text-[length:var(--icon-size-500)] leading-none" aria-hidden>⛽</span>
+                    <h1 className="font-heading text-500 font-semibold leading-tight">Fuel Mood</h1>
+                </div>
+                {children}
             </div>
+            <p className="truncate border-t border-border px-400 py-100 text-200 text-muted-foreground" title={scenario}>{scenario}</p>
         </header>
     );
 }
@@ -325,7 +336,7 @@ function Brand({ subtitle }: { subtitle: string }) {
 const PILL = "rounded-full px-400 py-100 text-300 font-medium focus-visible:outline-2 focus-visible:outline-ring";
 const PILL_ON = "bg-primary text-primary-foreground";
 const PILL_OFF = "text-muted-foreground hover:text-foreground";
-const GROUP = "flex rounded-full border border-border bg-glass p-100 shadow-16 backdrop-blur-md";
+const GROUP = "flex rounded-full border border-border bg-card p-100";
 
 const PAGES = [
     { page: "map", href: "#", label: "Changes", Icon: TrendingUp, tip: "Price changes: this week's mood and the change since February" },
@@ -374,10 +385,12 @@ function HeaderControls({ page, fuel, onFuel, component, onComponent, isDark, on
                     </HoverTip>
                 ))}
             </div>
-            <a href="#info"
-                className="flex h-800 items-center gap-100 rounded-full border border-border bg-glass px-300 text-300 font-medium text-foreground shadow-16 backdrop-blur-md hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
-                <Info className="icon-size-200" aria-hidden /> Additional info
-            </a>
+            <HoverTip side="bottom" tip="Additional info: sources and method">
+                <a href="#info" aria-label="Additional info"
+                    className="flex h-800 items-center gap-100 rounded-full border border-border bg-card px-300 text-300 font-medium text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                    <Info className="icon-size-200" aria-hidden /><span className="hidden xl:inline">Additional info</span>
+                </a>
+            </HoverTip>
             <IconButton label={isDark ? "Light mode" : "Dark mode"} onClick={onTheme}>
                 {isDark ? <Sun className="icon-size-200" /> : <Moon className="icon-size-200" />}
             </IconButton>
@@ -389,32 +402,37 @@ function IconButton({ label, onClick, children }: { label: string; onClick: () =
     return (
         <HoverTip side="bottom" tip={label}>
             <button type="button" aria-label={label} onClick={onClick}
-                className="flex size-800 items-center justify-center rounded-full border border-border bg-glass text-foreground shadow-16 backdrop-blur-md hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                className="flex size-800 items-center justify-center rounded-full border border-border bg-card text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
                 {children}
             </button>
         </HoverTip>
     );
 }
 
-/** Phone header: one row with the page switch and a button that opens Display settings and shows the current Fuel and Price component. */
-function CompactHeader({ page, label, settingsOpen, onSettings }: { page: "map" | "compare"; label: string; settingsOpen: boolean; onSettings: () => void }) {
+/** Phone header: page switch and the Display settings button, with the selected scenario (the same line as on the desktop top bar) underneath. */
+function CompactHeader({ page, label, scenario, settingsOpen, onSettings }: {
+    page: "map" | "compare"; label: string; scenario: string; settingsOpen: boolean; onSettings: () => void;
+}) {
     return (
-        <header className="flex h-14 shrink-0 items-center gap-200 rounded-2xl border border-border bg-glass pl-200 pr-100 shadow-16 backdrop-blur-md">
-            <span className="hidden text-[length:var(--icon-size-500)] leading-none min-[380px]:inline" aria-hidden>⛽</span>
-            <h1 className="sr-only">Fuel Mood</h1>
-            <nav aria-label="Page" className="flex shrink-0 rounded-full border border-border bg-card p-100-nudge">
-                {PAGES.map(({ page: p, href, label: text }) => (
-                    <a key={p} href={href} aria-current={page === p ? "page" : undefined}
-                        className={cn(PILL, "flex min-h-10 items-center px-300", page === p ? PILL_ON : PILL_OFF)}>
-                        {text}
-                    </a>
-                ))}
-            </nav>
-            <button type="button" onClick={onSettings} aria-haspopup="dialog" aria-expanded={settingsOpen} aria-label={`Display settings: ${label}`}
-                className="ml-auto flex min-h-11 min-w-0 items-center gap-100-nudge rounded-full border border-border bg-card pl-300 pr-200 text-200 font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-                <span className="truncate">{label}</span>
-                <ChevronDown className="icon-size-200 shrink-0" aria-hidden />
-            </button>
+        <header className="flex shrink-0 flex-col rounded-2xl border border-border bg-glass shadow-16 backdrop-blur-md">
+            <div className="flex h-14 items-center gap-200 pl-200 pr-100">
+                <span className="hidden text-[length:var(--icon-size-500)] leading-none min-[380px]:inline" aria-hidden>⛽</span>
+                <h1 className="sr-only">Fuel Mood</h1>
+                <nav aria-label="Page" className="flex shrink-0 rounded-full border border-border bg-card p-100-nudge">
+                    {PAGES.map(({ page: p, href, label: text }) => (
+                        <a key={p} href={href} aria-current={page === p ? "page" : undefined}
+                            className={cn(PILL, "flex min-h-10 items-center px-300", page === p ? PILL_ON : PILL_OFF)}>
+                            {text}
+                        </a>
+                    ))}
+                </nav>
+                <button type="button" onClick={onSettings} aria-haspopup="dialog" aria-expanded={settingsOpen} aria-label={`Display settings: ${label}`}
+                    className="ml-auto flex min-h-11 min-w-0 items-center gap-100-nudge rounded-full border border-border bg-card pl-300 pr-200 text-200 font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                    <span className="truncate">{label}</span>
+                    <ChevronDown className="icon-size-200 shrink-0" aria-hidden />
+                </button>
+            </div>
+            <p className="w-0 min-w-full border-t border-border px-300 py-100 text-200 leading-snug text-muted-foreground">{scenario}</p>
         </header>
     );
 }
@@ -495,11 +513,12 @@ function SettingsGroup({ label, children }: { label: string; children: ReactNode
 }
 
 /** Rounded chip over the map (phones): opens the Legend or the All countries ranking. */
+/** On a small landscape phone (< 760 px wide) the chips share the top row with the header, so they shrink to a 44 px icon. */
 function Chip({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
     return (
-        <button type="button" onClick={onClick}
-            className="flex min-h-11 items-center gap-200 rounded-full border border-border bg-glass px-400 text-300 font-semibold text-foreground shadow-16 backdrop-blur-md focus-visible:outline-2 focus-visible:outline-ring">
-            {children}{label}
+        <button type="button" onClick={onClick} title={label}
+            className="flex min-h-11 items-center justify-center gap-200 rounded-full border border-border bg-glass px-400 text-300 font-semibold text-foreground shadow-16 backdrop-blur-md focus-visible:outline-2 focus-visible:outline-ring [@media(orientation:landscape)_and_(max-width:759px)]:w-11 [@media(orientation:landscape)_and_(max-width:759px)]:px-0">
+            {children}<span className="[@media(orientation:landscape)_and_(max-width:759px)]:sr-only">{label}</span>
         </button>
     );
 }

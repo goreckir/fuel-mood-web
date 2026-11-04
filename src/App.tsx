@@ -27,9 +27,9 @@ function App() {
     const [storedComponent, setComponent] = usePersistentState<PriceComponent>("fw.priceComponent", "pump");
     const priceComponent = PRICE_COMPONENTS.find((c) => c.code === storedComponent) ?? PRICE_COMPONENTS[0];
     const component = priceComponent.code;
-    const [country, setCountry] = usePersistentState<string>("fw.country", "PL");
+    const [country, setCountry] = usePersistentState<string>("fw.country", "");
     const [markerStyle, setMarkerStyle] = usePersistentState<MarkerStyle>("fw.markers", "mood");
-    const [markerValue, setMarkerValue] = usePersistentState<MarkerValue>("fw.markerValue", "week");
+    const [markerValue, setMarkerValue] = usePersistentState<MarkerValue>("fw.markerValue", "baseline");
     const [view, setView] = useState<"country" | "ranking">("country");
     const [weekIndex, setWeekIndex] = useState<number>();
     const [playing, setPlaying] = useState(false);

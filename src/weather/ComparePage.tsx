@@ -41,7 +41,7 @@ export function ComparePage(props: Props) {
     const { geo, weather, error, brand, controls, fuel, fuelLabel, component, componentName, weeks, index, isDark, country, onCountry, playing, onPlaying, onIndex } = props;
     const wide = useMediaQuery(WIDE);
     const short = useMediaQuery(SHORT_LANDSCAPE);
-    const [mobileView, setMobileView] = useState<"map" | "list">("list");
+    const [mobileView, setMobileView] = useState<"map" | "list">("map");
     const [hovered, setHovered] = useState<string>();
     const week = weeks[index];
 

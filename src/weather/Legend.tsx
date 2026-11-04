@@ -31,7 +31,7 @@ const num = (v: number) => (v < 0 ? `−${-v}` : `${v}`);
 export function Legend({ bands, component, componentName, baselineWeek, heatRange, onHeatRange, markerStyle, onMarkerStyle, markerValue, onMarkerValue, variant = "card", onClose }: Props) {
     const sheet = variant === "sheet";
     // Collapsed by default on narrower screens so the legend doesn't cover Iberia.
-    const [expanded, setOpen] = useState(() => window.innerWidth >= 1280);
+    const [expanded, setOpen] = useState(false);
     const open = sheet || expanded;
     const scale = HEAT_SCALES[component];
     const steps = scale.steps;

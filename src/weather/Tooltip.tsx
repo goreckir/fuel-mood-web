@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { CAN_HOVER, matches } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
 import { BAND_CLASS, bandLabel, euro, formatWeek, signed, taxShareLabel, type Band, type Cell, type MarkerStyle } from "./data";
@@ -17,6 +18,8 @@ export function HoverTip({ tip, children, className, side = "top" }: { tip: Reac
     const ref = useRef<HTMLSpanElement>(null);
     const [pos, setPos] = useState<{ x: number; y: number }>();
     const show = () => {
+        // Touch screens fake hover and focus on tap; there the bubble would stick over the content.
+        if (!matches(CAN_HOVER)) return;
         const r = ref.current?.getBoundingClientRect();
         if (r) setPos({ x: r.left + r.width / 2, y: side === "top" ? r.top : r.bottom });
     };

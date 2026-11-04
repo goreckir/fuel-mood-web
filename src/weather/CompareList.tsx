@@ -92,10 +92,10 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
 
     return (
         <section aria-label="Country comparison" className="flex h-full min-h-0 flex-col">
-            <header className="border-b border-border px-400 pb-200 pt-300">
-                <h2 className="font-heading text-400 font-semibold">{componentName} by Country · {fuelLabel}</h2>
-                <p className="text-200 text-muted-foreground">Cheapest first · {formatWeek(week)} · Gap to the EU average</p>
-                <div className="mt-200 grid grid-cols-[1.5rem_minmax(0,1fr)_4rem_3.5rem] gap-x-200 gap-y-100 text-100 font-semibold uppercase tracking-wider text-muted-foreground sm:grid-cols-[1.5rem_8.5rem_4rem_minmax(0,1fr)_3.5rem]" aria-hidden>
+            <header className="border-b border-border px-400 pb-200 pt-300 [@media(max-height:560px)]:pt-100">
+                <h2 className="font-heading text-400 font-semibold [@media(max-height:560px)]:hidden">{componentName} by Country · {fuelLabel}</h2>
+                <p className="text-200 text-muted-foreground [@media(max-height:560px)]:hidden">Cheapest first · {formatWeek(week)} · Gap to the EU average</p>
+                <div className="mt-200 grid [@media(max-height:560px)]:mt-0 grid-cols-[1.5rem_minmax(0,1fr)_4rem_3.5rem] gap-x-200 gap-y-100 text-100 font-semibold uppercase tracking-wider text-muted-foreground sm:grid-cols-[1.5rem_8.5rem_4rem_minmax(0,1fr)_3.5rem]" aria-hidden>
                     <span className="text-right">#</span>
                     <span className="hidden sm:block">Country</span>
                     <span className="col-start-3 row-start-1 text-right">€/L</span>
@@ -172,7 +172,7 @@ export function CompareList({ rows, eu, component, componentName, fuelLabel, wee
                 })}
             </ol>
 
-            <p className="border-t border-border px-400 py-200 text-200 text-muted-foreground">
+            <p className="border-t border-border px-400 py-200 text-200 text-muted-foreground [@media(max-height:560px)]:truncate [@media(max-height:560px)]:py-100">
                 EC caveat: national averages are collected in different ways, so cross-country comparisons have limited validity.{" "}
                 <a href="#info" className="underline hover:text-foreground">More</a>
             </p>

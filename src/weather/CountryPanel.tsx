@@ -35,11 +35,18 @@ type Props = {
     onIndex: (i: number) => void;
 };
 
-export function CountryPanel(props: Props) {
-    const { view, onView } = props;
+type PanelProps = Props & {
+    /** "sheet": phone layout inside a bottom or side sheet (no card chrome, Close next to the tabs). */
+    variant?: "card" | "sheet";
+    onClose?: () => void;
+};
+
+export function CountryPanel(props: PanelProps) {
+    const { view, onView, variant = "card", onClose } = props;
+    const sheet = variant === "sheet";
     return (
-        <aside className="flex max-h-full w-96 flex-col rounded-xl border border-border bg-glass shadow-28 backdrop-blur-md">
-            <div role="tablist" className="flex gap-100 border-b border-border p-200">
+        <aside className={cn("flex flex-col", sheet ? "h-full min-h-0 w-full" : "max-h-full w-96 rounded-xl border border-border bg-glass shadow-28 backdrop-blur-md")}>
+            <div role="tablist" className={cn("flex items-center gap-100 border-b border-border p-200", sheet && "px-300 pt-0")}>
                 {(["country", "ranking"] as const).map((v) => (
                     <button
                         key={v}
@@ -49,25 +56,67 @@ export function CountryPanel(props: Props) {
                         onClick={() => onView(v)}
                         className={cn(
                             "flex-1 rounded-lg px-300 py-100 text-300 font-medium focus-visible:outline-2 focus-visible:outline-ring",
+                            sheet && "min-h-10",
                             view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
                         )}
                     >
                         {v === "country" ? "Country" : "All countries"}
                     </button>
                 ))}
+                {onClose && (
+                    <button type="button" aria-label="Close" onClick={onClose}
+                        className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                        <X className="icon-size-200" />
+                    </button>
+                )}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-400">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-400">
                 {view === "country" ? <CountryDetails {...props} /> : <Ranking {...props} />}
             </div>
         </aside>
     );
 }
 
-function CountryDetails(props: Props) {
+/**
+ * Phone peek: one row with the selected Country's mood, Price level and weekly change.
+ * Tapping it expands the sheet; Close deselects the Country.
+ */
+export function CountryPeek({ country, names, fuelLabel, componentName, weeks, index, series, bands, markerStyle, onExpand, onClose }:
+    Pick<Props, "names" | "fuelLabel" | "componentName" | "weeks" | "index" | "series" | "bands" | "markerStyle"> & { country: string; onExpand: () => void; onClose: () => void }) {
+    const cell = series[weeks[index]]?.[country];
+    const band = cell && bands.find((b) => b.BandCode === cell.band);
+    return (
+        <div className="flex items-center gap-200 border-b border-border pb-200 pl-400 pr-200">
+            <button type="button" onClick={onExpand} aria-label={`Show details for ${names[country] ?? country}`}
+                className="flex min-w-0 flex-1 items-center gap-300 rounded-lg py-100 text-left focus-visible:outline-2 focus-visible:outline-ring">
+                {cell && <BandGlyph band={cell.band} style={markerStyle} className={markerStyle === "weather" ? "text-[length:var(--icon-size-600)]" : "icon-size-600 shrink-0"} />}
+                <span className="min-w-0 flex-1">
+                    <span className="block text-100 font-semibold tracking-widest text-muted-foreground">{country} · {fuelLabel.toUpperCase()}</span>
+                    <span className="block truncate font-heading text-500 font-semibold leading-tight">{names[country] ?? country}</span>
+                    {cell && band
+                        ? <span className="block text-200"><span className={cn("font-semibold", BAND_CLASS[cell.band].text)}>{bandLabel(band, markerStyle)}</span><span className="tabular-nums text-muted-foreground"> · {signed(cell.weather)} w/w</span></span>
+                        : <span className="block text-200 text-muted-foreground">No data this week</span>}
+                </span>
+                {cell && (
+                    <span className="shrink-0 text-right">
+                        <span className="block text-100 text-muted-foreground">{componentName}</span>
+                        <span className="block font-numeric text-500 font-semibold tabular-nums">{euro(cell.price)}</span>
+                    </span>
+                )}
+            </button>
+            <button type="button" aria-label="Close" onClick={onClose}
+                className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                <X className="icon-size-200" />
+            </button>
+        </div>
+    );
+}
+
+function CountryDetails(props: PanelProps) {
     const { country, names, fuelLabel, component, componentName, weeks, index, series, pySeries, bands, markerStyle, onSelect, onIndex } = props;
     const cell = country ? series[weeks[index]]?.[country] : undefined;
     if (!country || !cell) {
-        return <p className="py-800 text-center text-300 text-muted-foreground">Click a country on the map to see its price weather.</p>;
+        return <p className="py-800 text-center text-300 text-muted-foreground">Select a country on the map to see its price weather.</p>;
     }
     const band = bands.find((b) => b.BandCode === cell.band)!;
     const scale = HEAT_SCALES[component];
@@ -88,10 +137,10 @@ function CountryDetails(props: Props) {
                     <div className="text-200 font-semibold tracking-widest text-muted-foreground">{country} · {fuelLabel}</div>
                     <h2 className="font-heading text-600 font-semibold">{names[country]}</h2>
                 </div>
-                <button type="button" aria-label="Close" onClick={() => onSelect(undefined)}
+                {!props.onClose && <button type="button" aria-label="Close" onClick={() => onSelect(undefined)}
                     className="rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
                     <X className="icon-size-200" />
-                </button>
+                </button>}
             </header>
 
             <div className="flex items-center gap-400">

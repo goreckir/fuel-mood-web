@@ -234,6 +234,13 @@ body,
   height: 100%;
 }
 
+/* Phones: follow the visible viewport (mobile browser toolbars come and go). */
+@supports (height: 100dvh) {
+  #root {
+    height: 100dvh;
+  }
+}
+
 /* Native form controls don't inherit the page font by default */
 button, input, select, textarea {
   font-family: inherit;

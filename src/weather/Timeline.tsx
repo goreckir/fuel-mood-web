@@ -19,25 +19,29 @@ type Props = {
     showWeather?: boolean;
     /** Replaces the "EU-27 average" Weather line under the week. */
     caption?: ReactNode;
+    /** Phone layout: docked inside a sheet (no card chrome), no EU Weather strip, 44 px touch targets. */
+    compact?: boolean;
 };
 
 /** Week slider with Play; above each week the EU-27 average Weather, so the timeline doubles as an EU Weather strip. */
-export function Timeline({ weeks, series, bands, index, playing, markerStyle, onIndex, onPlaying, showWeather = true, caption }: Props) {
+export function Timeline({ weeks, series, bands, index, playing, markerStyle, onIndex, onPlaying, showWeather = true, caption, compact = false }: Props) {
     const eu = euAverageWeather(series[weeks[index]] ?? {});
     return (
-        <section aria-label="Bulletin week" className="flex w-full max-w-4xl items-center gap-400 rounded-xl border border-border bg-glass px-400 py-300 shadow-16 backdrop-blur-md">
+        <section aria-label="Bulletin week" className={cn("flex w-full items-center",
+            compact ? "gap-300 bg-card px-400 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-300 [@media(max-height:560px)]:py-200"
+                : "max-w-4xl gap-400 rounded-xl border border-border bg-glass px-400 py-300 shadow-16 backdrop-blur-md")}>
             <button
                 type="button"
                 onClick={() => onPlaying(!playing)}
                 aria-label={playing ? "Pause" : "Play weeks"}
-                className="flex size-800 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-ring"
+                className={cn("flex shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-ring", compact ? "size-11" : "size-800")}
             >
                 {playing ? <Pause className="icon-size-200" /> : <Play className="icon-size-200" />}
             </button>
 
             <div className="min-w-0 flex-1">
                 {/* One equal column per week, so the row always fits the slider width; glyphs shrink when space is tight */}
-                {showWeather && <div className="grid" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }} aria-hidden>
+                {showWeather && !compact && <div className="grid" style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }} aria-hidden>
                     {weeks.map((w, i) => (
                         <HoverTip key={w} className="min-w-0 justify-center" tip={<span className="tabular-nums"><b>{formatWeek(w, "short")}</b> · EU-27 average {signed(euAverageWeather(series[w] ?? {}), 2)} w/w</span>}>
                             <button
@@ -60,16 +64,16 @@ export function Timeline({ weeks, series, bands, index, playing, markerStyle, on
                     onChange={(e) => { onPlaying(false); onIndex(Number(e.target.value)); }}
                     aria-label="Bulletin week"
                     aria-valuetext={formatWeek(weeks[index])}
-                    className="mt-100 w-full accent-primary"
+                    className={cn("w-full accent-primary", compact ? "h-11" : "mt-100")}
                 />
-                <div className="flex justify-between text-200 text-muted-foreground">
+                <div className={cn("flex justify-between text-200 text-muted-foreground", compact && "-mt-200 [@media(max-height:560px)]:hidden")}>
                     <span>{formatWeek(weeks[0], "short")}</span>
                     <span>{formatWeek(weeks[weeks.length - 1], "short")}</span>
                 </div>
             </div>
 
             <div className="shrink-0 text-right">
-                <div className="font-heading text-400 font-semibold tabular-nums">{formatWeek(weeks[index])}</div>
+                <div className="font-heading text-400 font-semibold tabular-nums">{formatWeek(weeks[index], compact ? "short" : undefined)}</div>
                 <div className="text-200 text-muted-foreground">{caption ?? <>EU-27 average {signed(eu, 2)}</>}</div>
             </div>
         </section>

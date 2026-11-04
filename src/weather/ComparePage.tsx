@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { List, Map as MapIcon } from "lucide-react";
 
+import { SHORT_LANDSCAPE, useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { CompareList, type CompareRow, type EuRow } from "./CompareList";
 import { CompareMap } from "./CompareMap";
@@ -33,12 +34,13 @@ type Props = {
     onIndex: (i: number) => void;
 };
 
-/** Desktop shows map and list side by side; below this width a Map / List toggle shows one of them. */
-const WIDE = "(min-width: 768px)";
+/** Desktop shows map and list side by side; on phones (narrow, or a short landscape screen) a Map / List toggle shows one of them. */
+const WIDE = "(min-width: 768px) and (min-height: 561px)";
 
 export function ComparePage(props: Props) {
     const { geo, weather, error, brand, controls, fuel, fuelLabel, component, componentName, weeks, index, isDark, country, onCountry, playing, onPlaying, onIndex } = props;
     const wide = useMediaQuery(WIDE);
+    const short = useMediaQuery(SHORT_LANDSCAPE);
     const [mobileView, setMobileView] = useState<"map" | "list">("list");
     const [hovered, setHovered] = useState<string>();
     const week = weeks[index];
@@ -81,29 +83,31 @@ export function ComparePage(props: Props) {
         return () => clearTimeout(timer);
     }, [isDark]);
 
+    const toggle = (
+        <div role="tablist" aria-label="Show" className="flex flex-1 gap-100 rounded-lg border border-border p-100">
+            {([["list", "List", List], ["map", "Map", MapIcon]] as const).map(([v, label, Icon]) => (
+                <button key={v} type="button" role="tab" aria-selected={mobileView === v} onClick={() => setMobileView(v)}
+                    className={cn(
+                        "flex min-h-10 flex-1 items-center justify-center gap-100 rounded-md px-300 py-100 text-300 font-medium focus-visible:outline-2 focus-visible:outline-ring",
+                        mobileView === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+                    )}>
+                    <Icon className="icon-size-200" aria-hidden /> {label}
+                </button>
+            ))}
+        </div>
+    );
     const showMap = wide || mobileView === "map";
     const showList = wide || mobileView === "list";
 
     return (
         <div className="flex h-full w-full flex-col overflow-hidden bg-background">
-            <div className="flex flex-wrap items-start justify-between gap-200 p-400 pb-200">
+            <div className={cn("flex items-start justify-between gap-200", wide ? "flex-wrap p-400 pb-200" : "p-300 pb-200", !wide && (short ? "items-center" : "flex-col items-stretch"))}>
                 {brand}
                 {controls}
+                {!wide && short && toggle}
             </div>
 
-            {!wide && (
-                <div role="tablist" aria-label="Show" className="mx-400 mb-200 flex gap-100 rounded-lg border border-border p-100">
-                    {([["list", "List", List], ["map", "Map", MapIcon]] as const).map(([v, label, Icon]) => (
-                        <button key={v} type="button" role="tab" aria-selected={mobileView === v} onClick={() => setMobileView(v)}
-                            className={cn(
-                                "flex flex-1 items-center justify-center gap-100 rounded-md px-300 py-100 text-300 font-medium focus-visible:outline-2 focus-visible:outline-ring",
-                                mobileView === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
-                            )}>
-                            <Icon className="icon-size-200" aria-hidden /> {label}
-                        </button>
-                    ))}
-                </div>
-            )}
+            {!wide && !short && <div className="mx-300 mb-200">{toggle}</div>}
 
             {error && (
                 <div role="alert" className="mx-400 rounded-lg bg-destructive px-400 py-200 text-300 text-destructive-foreground">Could not load data: {error}</div>
@@ -113,7 +117,7 @@ export function ComparePage(props: Props) {
             )}
 
             {comparison && week && (
-                <main className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-400 px-400 md:grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)]">
+                <main className={cn("grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-400", wide ? "px-400" : "px-300", wide && "grid-cols-[minmax(0,1fr)_minmax(26rem,34rem)]")}>
                     {showMap && geo && (
                         <div className="relative min-h-0 overflow-hidden rounded-xl border border-border bg-map-sea">
                             <CompareMap geo={geo} rows={comparison.byCode} componentName={componentName} week={week}
@@ -131,8 +135,8 @@ export function ComparePage(props: Props) {
             )}
 
             {weather && comparison && week && (
-                <div className="flex justify-center p-400 pt-300">
-                    <Timeline weeks={weeks} series={componentSeries(weather, component, fuel)} bands={weather.bands} index={index}
+                <div className={wide ? "flex justify-center p-400 pt-300" : "mt-200 border-t border-border"}>
+                    <Timeline compact={!wide} weeks={weeks} series={componentSeries(weather, component, fuel)} bands={weather.bands} index={index}
                         playing={playing} markerStyle="mood" showWeather={false}
                         caption={<>EU average {euro(comparison.eu.level)}</>}
                         onIndex={onIndex} onPlaying={onPlaying} />
@@ -144,15 +148,4 @@ export function ComparePage(props: Props) {
 
 function readGapColours() {
     return { low: cssVar("--color-gap-low"), mid: cssVar("--color-gap-mid"), high: cssVar("--color-gap-high") };
-}
-
-function useMediaQuery(query: string) {
-    const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
-    useEffect(() => {
-        const mql = window.matchMedia(query);
-        const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
-        mql.addEventListener("change", onChange);
-        return () => mql.removeEventListener("change", onChange);
-    }, [query]);
-    return matches;
 }

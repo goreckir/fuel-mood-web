@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Thermometer } from "lucide-react";
+import { ChevronDown, ChevronUp, Thermometer, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
@@ -19,28 +19,40 @@ type Props = {
     onMarkerStyle: (s: MarkerStyle) => void;
     markerValue: MarkerValue;
     onMarkerValue: (v: MarkerValue) => void;
+    /** "sheet": phone layout, always expanded inside a sheet, with a Close button instead of the collapse chevron. */
+    variant?: "card" | "sheet";
+    onClose?: () => void;
 };
 
 /** Step label with a typographic minus. */
 const num = (v: number) => (v < 0 ? `−${-v}` : `${v}`);
 
 /** Thermometer (Heat) + Weather bands. Clicking a Heat step highlights its Countries on the map. */
-export function Legend({ bands, component, componentName, baselineWeek, heatRange, onHeatRange, markerStyle, onMarkerStyle, markerValue, onMarkerValue }: Props) {
+export function Legend({ bands, component, componentName, baselineWeek, heatRange, onHeatRange, markerStyle, onMarkerStyle, markerValue, onMarkerValue, variant = "card", onClose }: Props) {
+    const sheet = variant === "sheet";
     // Collapsed by default on narrower screens so the legend doesn't cover Iberia.
-    const [open, setOpen] = useState(() => window.innerWidth >= 1280);
+    const [expanded, setOpen] = useState(() => window.innerWidth >= 1280);
+    const open = sheet || expanded;
     const scale = HEAT_SCALES[component];
     const steps = scale.steps;
     // A scale that goes below 0 (Taxes) is open-ended at both ends; otherwise only the top step is.
     const openLow = scale.min < 0;
     return (
-        <section aria-label="Legend" className="w-80 rounded-xl border border-border bg-glass p-400 shadow-16 backdrop-blur-md">
+        <section aria-label="Legend" className={sheet ? "@container w-full p-400 pt-200" : "w-80 rounded-xl border border-border bg-glass p-400 shadow-16 backdrop-blur-md"}>
             <h2 className="mb-200 flex items-center gap-100 font-heading text-300 font-semibold">
                 <Thermometer className="icon-size-200 shrink-0" aria-hidden /> <span className="whitespace-nowrap">{componentName}</span>
                 <span className="font-base text-200 font-normal text-muted-foreground">% change vs baseline · {baselineWeek}</span>
-                <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={open ? "Collapse legend" : "Expand legend"}
-                    className="ml-auto rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
-                    {open ? <ChevronDown className="icon-size-200" /> : <ChevronUp className="icon-size-200" />}
-                </button>
+                {sheet ? (
+                    <button type="button" onClick={onClose} aria-label="Close legend"
+                        className="-my-200 -mr-200 ml-auto flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                        <X className="icon-size-200" />
+                    </button>
+                ) : (
+                    <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={open ? "Collapse legend" : "Expand legend"}
+                        className="ml-auto rounded-md p-100 text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+                        {open ? <ChevronDown className="icon-size-200" /> : <ChevronUp className="icon-size-200" />}
+                    </button>
+                )}
             </h2>
             <div
                 className="h-200 rounded-full"
@@ -60,6 +72,7 @@ export function Legend({ bands, component, componentName, baselineWeek, heatRang
                             onClick={() => onHeatRange(active ? undefined : [from, to])}
                             className={cn(
                                 "whitespace-nowrap rounded-md px-100 py-100 text-200 tabular-nums text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring",
+                                sheet && "min-h-11 border border-border",
                                 active && "bg-primary text-primary-foreground hover:bg-primary",
                             )}
                         >
@@ -78,7 +91,7 @@ export function Legend({ bands, component, componentName, baselineWeek, heatRang
                 <div role="radiogroup" aria-label="Marker style" className="flex rounded-full border border-border p-100">
                     {MARKER_STYLES.map(({ style, label }) => (
                         <button key={style} type="button" role="radio" aria-checked={markerStyle === style} onClick={() => onMarkerStyle(style)}
-                            className={cn("rounded-full px-200 text-200 font-medium focus-visible:outline-2 focus-visible:outline-ring",
+                            className={cn("rounded-full px-200 text-200 font-medium focus-visible:outline-2 focus-visible:outline-ring", sheet && "min-h-10 px-300",
                                 markerStyle === style ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                             {label}
                         </button>
@@ -90,7 +103,7 @@ export function Legend({ bands, component, componentName, baselineWeek, heatRang
                 <div role="radiogroup" aria-label="Marker value" className="flex rounded-full border border-border p-100">
                     {MARKER_VALUES.map(({ value, label }) => (
                         <button key={value} type="button" role="radio" aria-checked={markerValue === value} onClick={() => onMarkerValue(value)}
-                            className={cn("rounded-full px-200 text-200 font-medium focus-visible:outline-2 focus-visible:outline-ring",
+                            className={cn("rounded-full px-200 text-200 font-medium focus-visible:outline-2 focus-visible:outline-ring", sheet && "min-h-10 px-300",
                                 markerValue === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                             {label}
                         </button>
@@ -102,13 +115,13 @@ export function Legend({ bands, component, componentName, baselineWeek, heatRang
                     ? "The number on a country is the change vs the previous week (w/w). The country colour is the change since the Baseline price."
                     : "The number on a country is the change since the Baseline price, the same as its colour. Switch to Week for this week's change."}
             </p>
-            <ul className="grid grid-cols-1 gap-100">
+            <ul className={cn("grid grid-cols-1 gap-100", sheet && "@xs:grid-cols-2")}>
                 {bands.map((b) => (
                     <li key={b.BandCode} className="flex items-center gap-200 text-200">
                         <span className="flex w-600 justify-center py-100 text-400">
                             <BandGlyph band={b.BandCode} style={markerStyle} />
                         </span>
-                        <span className={cn("w-24 font-medium", BAND_CLASS[b.BandCode].text)}>{bandLabel(b, markerStyle)}</span>
+                        <span className={cn("font-medium", sheet ? "min-w-0" : "w-24", BAND_CLASS[b.BandCode].text)}>{bandLabel(b, markerStyle)}</span>
                         <span className="tabular-nums text-muted-foreground">{bandRange(b, bands)}</span>
                     </li>
                 ))}

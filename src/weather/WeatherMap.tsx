@@ -5,6 +5,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import Map, { Layer, Marker, Source, type MapRef } from "react-map-gl/maplibre";
 
+import { CAN_HOVER, COMPACT, SHORT_LANDSCAPE, matches } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { BandGlyph } from "./BandGlyph";
 import { BAND_CLASS, HEAT_SCALES, PRICE_COMPONENTS, cssVar, heatPosition, signed, textOn, type Band, type Cell, type Geo, type HeatScale, type MarkerStyle, type MarkerValue, type PriceComponent } from "./data";
@@ -44,6 +45,9 @@ function readColours() {
 /** Space taken by the overlays (legend left, panel right, timeline bottom); smaller screens stack the timeline lower. */
 function framePadding() {
     const w = window.innerWidth;
+    // Phones: only the one-row header and the bottom dock (or the landscape timeline) sit over the map.
+    if (matches(SHORT_LANDSCAPE)) return { top: 70, left: 12, right: 12, bottom: 80 };
+    if (matches(COMPACT)) return { top: 80, left: 8, right: 8, bottom: 150 };
     return { top: 90, left: Math.min(350, w * 0.22), right: Math.min(420, w * 0.28), bottom: w >= 1280 ? 40 : 130 };
 }
 
@@ -125,7 +129,7 @@ export function WeatherMap({ geo, cells, pumpCells, component, selected, heatRan
             ref={mapRef}
             // Fit EU-27 into the area left free by the floating legend, Country panel and timeline.
             initialViewState={{ bounds: EU_BOUNDS, fitBoundsOptions: { padding: framePadding() } }}
-            minZoom={2.5}
+            minZoom={matches(COMPACT) ? 1.5 : 2.5}
             maxZoom={7}
             style={{ position: "absolute", inset: 0 }}
             // No basemap: the sea is the container background (bg-map-sea), so it follows the theme without a style reload.
@@ -165,6 +169,8 @@ export function WeatherMap({ geo, cells, pumpCells, component, selected, heatRan
             {data.features.filter((f) => f.properties.hasData && (!visible || visible.has(f.properties.code))).map((f) => {
                 const { code, name, labelLon, labelLat, dimmed } = f.properties;
                 const showTip = () => {
+                    // On touch screens a tap selects (and opens the peek); a hover card would only cover the map.
+                    if (!matches(CAN_HOVER)) return;
                     const p = mapRef.current?.project([labelLon, labelLat]);
                     if (p) setTip({ code, x: p.x, y: p.y - 12 });
                 };
